@@ -1,38 +1,16 @@
-import { Taptree } from "bitcoinjs-lib/src/types";
-import { toXOnly } from "bitcoinjs-lib/src/psbt/bip371";
-import { Network, Psbt } from "bitcoinjs-lib";
+import { Psbt } from "bitcoinjs-lib";
 
 import {
-  calculateTxFee,
   combinePsbt,
-  finalizePsbtInput,
-  getFeeRate,
-  pushRawTx,
 } from "../service/psbt.service";
-import {
-  checkingAssets,
-  getTxHexById,
-  getUTXOByAddress,
-} from "../utils/function";
-import { IAssets, RequestType } from "../type";
+
+import { RequestType } from "../type";
 import MultisigModal from "../model/Multisig";
 import RequestModal from "../model/RequestModal";
 import TempMultisigModal from "../model/TempMultisig";
-import { OPENAPI_UNISAT_TOKEN, OPENAPI_UNISAT_URL, TEST_MODE } from "../config/config";
 import TaprootMultisigModal from "../model/TaprootMultisig";
 import TempTaprootMultisigModal from "../model/TempTaprootMultisig";
-import axios from "axios";
 
-const bitcoin = require("bitcoinjs-lib");
-const schnorr = require("bip-schnorr");
-const ECPairFactory = require("ecpair").default;
-const ecc = require("tiny-secp256k1");
-const fs = require("fs");
-
-const { alice, bob, carol, dave } = require("./wallets.json");
-
-const ECPair = ECPairFactory(ecc);
-const network = TEST_MODE ? bitcoin.networks.testnet : bitcoin.networks.bitcoin; // Otherwise, bitcoin = mainnet and regnet = local
 
 export async function getAllRequestList() {
   try {
