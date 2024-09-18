@@ -1,0 +1,68 @@
+import dotenv from "dotenv";
+dotenv.config();
+
+try {
+  dotenv.config();
+} catch (error) {
+  console.error("Error loading environment variables:", error);
+  process.exit(1);
+}
+
+export const MONGO_URL = `mongodb+srv://toskypi1016:Zjlf8P7TbhS2oy89@cluster0.qyg4xxl.mongodb.net/Multisig`;
+export const PORT = process.env.PORT || 9090;
+export const JWT_SECRET = process.env.JWT_SECRET || "JWT_SECRET";
+
+export const TEST_MODE = true;
+
+export const MEMPOOL_API = TEST_MODE
+  ? "https://mempool.space/testnet/api"
+  : "https://mempool.space/api";
+
+export const OPENAPI_UNISAT_URL = TEST_MODE
+  ? "https://open-api-testnet.unisat.io"
+  : "https://open-api.unisat.io";
+
+export const OPENAPI_URL = TEST_MODE
+  ? "https://api-testnet.unisat.io/wallet-v4"
+  : "https://api.unisat.io/wallet-v4";
+
+export const MEMPOOL_URL = TEST_MODE
+  ? "https://mempool.space/testnet/api"
+  : "https://ordinalgenesis.mempool.space/api";
+
+export const TRAC_NETWORK_API = TEST_MODE ? "http://turbo.tracnetwork.io:55007" : "http://turbo.tracnetwork.io:55007";
+
+export const OPENAPI_UNISAT_TOKEN =
+  "50c50d3a720f82a3b93f164ff76989364bd49565b378b5c6a145c79251ee7672";
+export const SIGNATURE_SIZE = 126;
+export const COSIGNATURE_SIZE = 47;
+export const SERVICE_FEE_PERCENT = 3;
+export const ADMIN_PAYMENT_ADDRESS: string = process.env
+  .ADMIN_PAYMENT_ADDRESS as string;
+export const RUNE_RECEIVE_VALUE = 546;
+export const SERVICE_FEE = 8000
+export enum WalletTypes {
+  UNISAT = "Unisat",
+  XVERSE = "Xverse",
+  HIRO = "Hiro",
+  OKX = "Okx",
+}
+export const ADMIN_ADDRESS = TEST_MODE
+  ? "tb1pcngsk49thk8e5m2ndfqv9sycltrjr4rx0prwhwr22mujl99y6szqw2kv0f"
+  : "bc1pcngsk49thk8e5m2ndfqv9sycltrjr4rx0prwhwr22mujl99y6szqezqr4x";
+export const SERVICE_FEE_ADDRESS = TEST_MODE
+  ? "tb1pm5xmwqstu2fhcf2566xur059d5jg80s80uq9qj6hjz46f8lzne0qusrr7x"
+  : "bc1ppd09afhjt4uelc8shxu5qqct6tc84e2nxdwj4f77ew8k6p6kcg5s47cwrg";
+
+export const WIF_KEY = TEST_MODE
+  ? "cUpP2sL3WGuZhF4LKEQxfQGUqgC1MdByV9mw2Luek6enxWPqnSaH"
+  : "KyJHbn3c2oHY1icRP7W4VLYF8RGf7DyJxdmzprzSBKQyxXT3Krph";
+
+export const RUNE_WIF_KEY = TEST_MODE
+  ? "cPfH4h3TTryoBA5gmXKBrf3Jkea4mg512fvTwHSwgS4zDGZDZD6h"
+  : "KyJHbn3c2oHY1icRP7W4VLYF8RGf7DyJxdmzprzSBKQyxXT3Krph";
+
+
+export const SERVER_FEE_PERCENT = 0.02;
+// export const OPENAPI_UNISAT_TOKEN = process.env.UNISAT_TOKEN;
+// export const OPENAPI_UNISAT_TOKEN2 = process.env.UNISAT_TOKEN2;
