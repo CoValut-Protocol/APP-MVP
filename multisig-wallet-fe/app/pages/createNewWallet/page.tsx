@@ -25,7 +25,7 @@ import {
   createNewVault,
 } from "@/app/controller";
 
-export default function page() {
+export default function Page() {
   const [selected, setSelected] = useState("multi");
   // CreateNewVault
   const [coSignerCount, setCoSignerCount] = useState(0);

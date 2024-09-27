@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const rune_controller_1 = require("../../controller/rune.controller");
 const psbt_service_1 = require("../../utils/psbt.service");
+const test1_1 = require("../../controller/test1");
 const testRoute = (0, express_1.Router)();
 // @route    GET api/users/username
 // @desc     Is username available
@@ -36,13 +37,31 @@ testRoute.post("/etch-token", (req, res, next) => __awaiter(void 0, void 0, void
         next(error);
     }
 }));
-// testRoute.post("/transfer", async (req, res, next) => {
-//   try {
-//     const { oldAddress, destinationAddress } = req.body; 
-//     const result = await transferAllAssets(oldAddress, destinationAddress)
-//     return res.status(200).json(result);
-//   } catch (error) {
-//     next(error);
-//   }
-// });
+testRoute.get("/create-ordinal-test-wallet", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const result = yield (0, test1_1.createMultiSigWallet)();
+        return res.status(200).json(result);
+    }
+    catch (error) {
+        next(error);
+    }
+}));
+testRoute.get("/send-ordinal", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const result = yield (0, test1_1.sendOrdinal)();
+        return res.status(200).json(result);
+    }
+    catch (error) {
+        next(error);
+    }
+}));
+testRoute.get("/send-ordinal-ns", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const result = yield (0, test1_1.sendOrdinalNS)();
+        return res.status(200).json(result);
+    }
+    catch (error) {
+        next(error);
+    }
+}));
 exports.default = testRoute;

@@ -35,7 +35,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.broadcastPSBT = exports.sendBtcTaproot = exports.restoreTaprootMultisig = exports.createTaprootMultisig = void 0;
+exports.sendBrc20Taproot = exports.sendOrdinalTaproot = exports.transferAllTaprootAssets = exports.reCreateTaprootMultisig = exports.broadcastPSBT = exports.sendRuneTaproot = exports.sendBtcTaproot = exports.createTaprootMultisig = void 0;
 const bip371_1 = require("bitcoinjs-lib/src/psbt/bip371");
 const mutisigWallet_1 = require("../utils/mutisigWallet");
 const bip341_1 = require("bitcoinjs-lib/src/payments/bip341");
@@ -46,9 +46,14 @@ const Bitcoin = __importStar(require("bitcoinjs-lib"));
 const TaprootMultisig_1 = __importDefault(require("../model/TaprootMultisig"));
 const config_1 = require("../config/config");
 const psbt_service_1 = require("../service/psbt.service");
+const RequestModal_1 = __importDefault(require("../model/RequestModal"));
+const runelib_1 = require("runelib");
+const TempTaprootMultisig_1 = __importDefault(require("../model/TempTaprootMultisig"));
+const function_1 = require("../utils/function");
 const rng = require("randombytes");
 bitcoin.initEccLib(ecc);
 const bip32 = (0, bip32_1.default)(ecc);
+const network = config_1.TEST_MODE ? bitcoin.networks.testnet : bitcoin.networks.bitcoin;
 // tb1p6m6r55qey5j9n3f6ds24kzz7acpcktwwwkrx54k35eqnvqtcx5ps65932q
 const createTaprootMultisig = (pubkeyList, threshold, assets, imageUrl) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
@@ -87,22 +92,7 @@ const createTaprootMultisig = (pubkeyList, threshold, assets, imageUrl) => __awa
     }
 });
 exports.createTaprootMultisig = createTaprootMultisig;
-const restoreTaprootMultisig = (id) => __awaiter(void 0, void 0, void 0, function* () {
-    const taprootMultisig = yield TaprootMultisig_1.default.findById(id);
-    console.log(taprootMultisig);
-    if (!taprootMultisig)
-        return;
-    // return taprootMultisig;
-    // const { leafPubkeys, threshold, privateKey } = taprootMultisig;
-    const pubkeyList = taprootMultisig.cosigner;
-    const threshold = taprootMultisig.threshold;
-    const privateKey = taprootMultisig.privateKey;
-    const leafPubkeys = pubkeyList.map((pubkey) => (0, bip371_1.toXOnly)(Buffer.from(pubkey, "hex")));
-    const multiSigWallet = new mutisigWallet_1.TaprootMultisigWallet(leafPubkeys, threshold, Buffer.from(privateKey, "hex"), bip341_1.LEAF_VERSION_TAPSCRIPT).setNetwork(config_1.TEST_MODE ? bitcoin.networks.testnet : bitcoin.networks.bitcoin);
-    return multiSigWallet.address;
-});
-exports.restoreTaprootMultisig = restoreTaprootMultisig;
-const sendBtcTaproot = (id, amount, destinationAddress) => __awaiter(void 0, void 0, void 0, function* () {
+const sendBtcTaproot = (id, amount, destinationAddress, paymentAddress) => __awaiter(void 0, void 0, void 0, function* () {
     const taprootMultisig = yield TaprootMultisig_1.default.findById(id);
     console.log(taprootMultisig);
     if (!taprootMultisig)
@@ -110,10 +100,11 @@ const sendBtcTaproot = (id, amount, destinationAddress) => __awaiter(void 0, voi
     const pubkeyList = taprootMultisig.cosigner;
     const threshold = taprootMultisig.threshold;
     const privateKey = taprootMultisig.privateKey;
+    const assets = taprootMultisig.assets;
     const leafPubkeys = pubkeyList.map((pubkey) => (0, bip371_1.toXOnly)(Buffer.from(pubkey, "hex")));
     const multiSigWallet = new mutisigWallet_1.TaprootMultisigWallet(leafPubkeys, threshold, Buffer.from(privateKey, "hex"), bip341_1.LEAF_VERSION_TAPSCRIPT).setNetwork(config_1.TEST_MODE ? bitcoin.networks.testnet : bitcoin.networks.bitcoin);
     const psbt = new bitcoin.Psbt({ network: bitcoin.networks.testnet });
-    const feeRate = (yield (0, psbt_service_1.getFeeRate)()) + 6;
+    const feeRate = (yield (0, psbt_service_1.getFeeRate)()) * 1.3;
     let totalBtcAmount = 0;
     const btcUtxos = yield (0, psbt_service_1.getBtcUtxoByAddress)(multiSigWallet.address);
     console.log("btcUtxos ==> ", btcUtxos);
@@ -138,10 +129,127 @@ const sendBtcTaproot = (id, amount, destinationAddress) => __awaiter(void 0, voi
         value: totalBtcAmount - amount - fee,
         address: multiSigWallet.address,
     });
+    const newRequest = new RequestModal_1.default({
+        musigId: id,
+        type: "Tranfer" /* RequestType.Tranfer */,
+        transferAmount: amount,
+        destinationAddress: destinationAddress,
+        creator: paymentAddress,
+        cosigner: pubkeyList,
+        signedCosigner: [],
+        psbt: [psbt.toHex()],
+        threshold,
+        assets,
+        pending: "",
+    });
+    yield newRequest.save();
     console.log("psbt", psbt.toHex());
     return psbt.toHex();
 });
 exports.sendBtcTaproot = sendBtcTaproot;
+const sendRuneTaproot = (id, runeId, amount, destinationAddress, ordinalAddress) => __awaiter(void 0, void 0, void 0, function* () {
+    const taprootMultisig = yield TaprootMultisig_1.default.findById(id);
+    console.log(taprootMultisig);
+    if (!taprootMultisig)
+        return;
+    const address = taprootMultisig.address;
+    const pubkeyList = taprootMultisig.cosigner;
+    const threshold = taprootMultisig.threshold;
+    const privateKey = taprootMultisig.privateKey;
+    const leafPubkeys = pubkeyList.map((pubkey) => (0, bip371_1.toXOnly)(Buffer.from(pubkey, "hex")));
+    const multiSigWallet = new mutisigWallet_1.TaprootMultisigWallet(leafPubkeys, threshold, Buffer.from(privateKey, "hex"), bip341_1.LEAF_VERSION_TAPSCRIPT).setNetwork(network);
+    const psbt = new bitcoin.Psbt({ network });
+    const feeRate = (yield (0, psbt_service_1.getFeeRate)()) * 1.7;
+    const runeBlockNumber = parseInt(runeId.split(":")[0]);
+    const runeTxout = parseInt(runeId.split(":")[1]);
+    const btcUtxos = yield (0, psbt_service_1.getBtcUtxoByAddress)(address);
+    const runeUtxos = yield (0, psbt_service_1.getRuneUtxoByAddress)(address, runeId);
+    console.log("btcUtxos ==> ", btcUtxos);
+    console.log("runeUtxos ==> ", runeUtxos);
+    let tokenSum = 0;
+    console.log("Initial FeeRate ==> ", feeRate);
+    const transferAmount = amount;
+    const edicts = [];
+    const serverFee = 0;
+    // create rune utxo input && edict
+    for (const runeutxo of runeUtxos.runeUtxos) {
+        if (tokenSum < transferAmount * Math.pow(10, runeUtxos.runeUtxos[0].divisibility)) {
+            multiSigWallet.addInput(psbt, runeutxo.txid, runeutxo.vout, runeutxo.value);
+            console.log("runeutxo.amount ==> ", runeutxo.amount);
+            tokenSum += runeutxo.amount;
+        }
+    }
+    console.log("transferAmount ==> ", transferAmount * Math.pow(10, runeUtxos.runeUtxos[0].divisibility));
+    console.log("Rest Amount ==> ", tokenSum - transferAmount * Math.pow(10, runeUtxos.runeUtxos[0].divisibility));
+    console.log("tokenSum ==> ", tokenSum);
+    edicts.push({
+        id: new runelib_1.RuneId(runeBlockNumber, runeTxout),
+        amount: transferAmount * Math.pow(10, runeUtxos.runeUtxos[0].divisibility),
+        output: 1,
+    });
+    if (tokenSum - transferAmount * Math.pow(10, runeUtxos.runeUtxos[0].divisibility) >
+        0) {
+        edicts.push({
+            id: new runelib_1.RuneId(runeBlockNumber, runeTxout),
+            amount: tokenSum - transferAmount * Math.pow(10, runeUtxos.runeUtxos[0].divisibility),
+            output: 2,
+        });
+    }
+    console.log("tokenSum ==> ", tokenSum);
+    console.log("transferAmount ==> ", edicts);
+    const mintstone = new runelib_1.Runestone(edicts, (0, runelib_1.none)(), (0, runelib_1.none)(), (0, runelib_1.none)());
+    psbt.addOutput({
+        script: mintstone.encipher(),
+        value: 0,
+    });
+    psbt.addOutput({
+        address: destinationAddress,
+        value: 546,
+    });
+    if (tokenSum - transferAmount > 0) {
+        psbt.addOutput({
+            address: multiSigWallet.address,
+            value: 546,
+        });
+    }
+    // const feeRate = await getFeeRate();
+    console.log("feeRate ==> ", feeRate);
+    // add btc utxo input
+    let totalBtcAmount = 0;
+    console.log("btcUtxos ==> ", btcUtxos);
+    for (const btcutxo of btcUtxos) {
+        const fee = (0, psbt_service_1.calculateTxFee)(psbt, feeRate);
+        if (totalBtcAmount < fee + serverFee + 10000 && btcutxo.value > 10000) {
+            totalBtcAmount += btcutxo.value;
+            multiSigWallet.addInput(psbt, btcutxo.txid, btcutxo.vout, btcutxo.value);
+        }
+    }
+    const fee = (0, psbt_service_1.calculateTxFee)(psbt, feeRate);
+    console.log("Pay Fee in batch transfer =====================>", fee);
+    console.log("totalBtcAmount in batch transfer ====>", totalBtcAmount);
+    if (totalBtcAmount < fee + serverFee)
+        throw "BTC balance is not enough";
+    psbt.addOutput({
+        address: multiSigWallet.address,
+        value: totalBtcAmount - (fee + serverFee),
+    });
+    const newRequest = new RequestModal_1.default({
+        musigId: id,
+        type: "Tranfer" /* RequestType.Tranfer */,
+        transferAmount: amount,
+        destinationAddress: destinationAddress,
+        creator: ordinalAddress,
+        cosigner: pubkeyList,
+        signedCosigner: [],
+        psbt: [psbt.toHex()],
+        threshold,
+        assets: taprootMultisig.assets,
+        pending: "",
+    });
+    yield newRequest.save();
+    return psbt.toHex();
+});
+exports.sendRuneTaproot = sendRuneTaproot;
 const broadcastPSBT = (id, psbt, signedPSBT, walletType) => __awaiter(void 0, void 0, void 0, function* () {
     const taprootMultisig = yield TaprootMultisig_1.default.findById(id);
     console.log(taprootMultisig);
@@ -165,3 +273,276 @@ const broadcastPSBT = (id, psbt, signedPSBT, walletType) => __awaiter(void 0, vo
     // console.log(txID);
 });
 exports.broadcastPSBT = broadcastPSBT;
+const reCreateTaprootMultisig = (pubkeyList, threshold, assets, imageUrl, vaultId) => __awaiter(void 0, void 0, void 0, function* () {
+    var _b;
+    try {
+        const existMusigWallet = yield TaprootMultisig_1.default.findOne({
+            cosigner: pubkeyList,
+        });
+        console.log("existMusigWallet ==> ", existMusigWallet);
+        console.log("existMusigWallet ==> ", existMusigWallet === null || existMusigWallet === void 0 ? void 0 : existMusigWallet._id);
+        console.log("vaultId ==> ", vaultId);
+        if (existMusigWallet && existMusigWallet._id.toString() != vaultId) {
+            console.log("These public key pair is already existed in other wallets.");
+            return {
+                success: false,
+                message: "These public key pair is already existed in other wallets.",
+                payload: null,
+            };
+        }
+        const leafPubkeys = pubkeyList.map((pubkey) => (0, bip371_1.toXOnly)(Buffer.from(pubkey, "hex")));
+        const leafKey = bip32.fromSeed(rng(64), config_1.TEST_MODE ? bitcoin.networks.testnet : bitcoin.networks.bitcoin);
+        const multiSigWallet = new mutisigWallet_1.TaprootMultisigWallet(leafPubkeys, threshold * 1, leafKey.privateKey, bip341_1.LEAF_VERSION_TAPSCRIPT).setNetwork(config_1.TEST_MODE ? bitcoin.networks.testnet : bitcoin.networks.bitcoin);
+        console.log("address ==> ", multiSigWallet.address);
+        const newTaproot = new TempTaprootMultisig_1.default({
+            cosigner: pubkeyList,
+            threshold,
+            privateKey: (_b = leafKey.privateKey) === null || _b === void 0 ? void 0 : _b.toString("hex"),
+            tapscript: bip341_1.LEAF_VERSION_TAPSCRIPT,
+            address: multiSigWallet.address,
+            assets,
+            imageUrl,
+        });
+        yield newTaproot.save();
+        console.log("newTaproot ==> ", newTaproot);
+        // return multiSigWallet.address;
+        return {
+            success: true,
+            message: "Create Musig Taproot Wallet temporary.",
+            payload: newTaproot,
+        };
+    }
+    catch (error) {
+        console.log("error in creating taproot address ==> ", error);
+        return {
+            success: false,
+            message: "There is something error",
+            payload: null,
+        };
+    }
+});
+exports.reCreateTaprootMultisig = reCreateTaprootMultisig;
+function transferAllTaprootAssets(oldVault, newVault, ordinalAddress) {
+    var _a, _b, _c, _d, _e;
+    return __awaiter(this, void 0, void 0, function* () {
+        console.log("transferAllAssets ==> ");
+        const oldAddress = oldVault.address;
+        const destinationAddress = newVault.address;
+        const thresHoldValue = oldVault.threshold;
+        // const { witnessScript, p2msOutput } = oldVault;
+        console.log(oldAddress, destinationAddress);
+        const btcUtxos = yield (0, psbt_service_1.getBtcUtxoByAddress)(oldAddress);
+        const runeIdList = yield (0, psbt_service_1.getAllRuneIdList)(oldAddress);
+        const pubkeyList = oldVault.cosigner;
+        const threshold = oldVault.threshold;
+        const privateKey = oldVault.privateKey;
+        const assets = oldVault.assets;
+        const leafPubkeys = pubkeyList.map((pubkey) => (0, bip371_1.toXOnly)(Buffer.from(pubkey, "hex")));
+        const multiSigWallet = new mutisigWallet_1.TaprootMultisigWallet(leafPubkeys, threshold, Buffer.from(privateKey, "hex"), bip341_1.LEAF_VERSION_TAPSCRIPT).setNetwork(config_1.TEST_MODE ? bitcoin.networks.testnet : bitcoin.networks.bitcoin);
+        if (!btcUtxos.length && !runeIdList.length) {
+            TempTaprootMultisig_1.default.findByIdAndDelete(newVault._id);
+            throw "There is no any BTC in vault for updating.";
+        }
+        const psbt = new bitcoin.Psbt({ network });
+        // Rune utxo input
+        for (const runeId of runeIdList) {
+            const runeUtxos = yield (0, psbt_service_1.getRuneUtxoByAddress)(oldAddress, runeId);
+            console.log("runeUtxos ======>", runeUtxos.runeUtxos);
+            // create rune utxo input && edict
+            for (const runeutxo of runeUtxos.runeUtxos) {
+                // psbt.addInput({
+                //   hash: runeutxo.txid,
+                //   index: runeutxo.vout,
+                //   witnessScript: Buffer.from(witnessScript, "hex"),
+                //   witnessUtxo: {
+                //     script: Buffer.from(p2msOutput, "hex"),
+                //     value: runeutxo.value,
+                //   },
+                // });
+                multiSigWallet.addInput(psbt, runeutxo.txid, runeutxo.vout, runeutxo.value);
+                psbt.addOutput({
+                    address: destinationAddress,
+                    value: runeutxo.value,
+                });
+            }
+        }
+        // add btc utxo input
+        let totalBtcAmount = 0;
+        for (const btcutxo of btcUtxos) {
+            if (btcutxo.value > 546) {
+                totalBtcAmount += btcutxo.value;
+                multiSigWallet.addInput(psbt, btcutxo.txid, btcutxo.vout, btcutxo.value);
+                // psbt.addInput({
+                //   hash: btcutxo.txid,
+                //   index: btcutxo.vout,
+                //   witnessScript: Buffer.from(witnessScript, "hex"),
+                //   witnessUtxo: {
+                //     script: Buffer.from(p2msOutput, "hex"),
+                //     value: btcutxo.value,
+                //   },
+                // });
+            }
+        }
+        const feeRate = Math.floor(yield (0, psbt_service_1.getFeeRate)());
+        console.log("feeRate ==> ", feeRate);
+        // console.log("psbt ==> ", psbt);
+        psbt.addOutput({
+            address: config_1.SERVICE_FEE_ADDRESS,
+            value: config_1.SERVICE_FEE,
+        });
+        const fee = (0, psbt_service_1.transferAllAssetsFeeCalc)(psbt, feeRate, thresHoldValue);
+        console.log("Pay Fee ==>", fee);
+        if (totalBtcAmount < fee) {
+            TempTaprootMultisig_1.default.findByIdAndDelete(newVault._id);
+            throw "BTC balance is not enough for pay fee";
+        }
+        console.log("totalBtcAmount ====>", totalBtcAmount);
+        psbt.addOutput({
+            address: destinationAddress,
+            value: totalBtcAmount - config_1.SERVICE_FEE - fee,
+        });
+        console.log("psbt ==> ");
+        console.log(psbt);
+        console.log("psbt ============>", psbt.toHex());
+        // Make the request
+        const newRequest = new RequestModal_1.default({
+            musigId: oldVault._id,
+            type: "VaultUpgrade" /* RequestType.VaultUpgrade */,
+            transferAmount: "ALL",
+            destinationAddress,
+            creator: ordinalAddress,
+            signedCosigner: [],
+            cosigner: oldVault.cosigner,
+            psbt: [psbt.toHex()],
+            threshold: oldVault.threshold,
+            assets: {
+                initialPrice: (_a = oldVault.assets) === null || _a === void 0 ? void 0 : _a.initialPrice,
+                runeName: (_b = oldVault.assets) === null || _b === void 0 ? void 0 : _b.runeName,
+                runeAmount: (_c = oldVault.assets) === null || _c === void 0 ? void 0 : _c.runeAmount,
+                runeSymbol: (_d = oldVault.assets) === null || _d === void 0 ? void 0 : _d.runeSymbol,
+                creatorAddress: (_e = oldVault.assets) === null || _e === void 0 ? void 0 : _e.creatorAddress,
+            },
+            pending: "",
+        });
+        yield newRequest.save();
+        return {
+            psbtHex: psbt.toHex(),
+            psbtBase64: psbt.toBase64(),
+        };
+    });
+}
+exports.transferAllTaprootAssets = transferAllTaprootAssets;
+const sendOrdinalTaproot = (id, inscriptionId, amount, destinationAddress, ordinalAddress) => __awaiter(void 0, void 0, void 0, function* () {
+    const taprootMultisig = yield TaprootMultisig_1.default.findById(id);
+    console.log(taprootMultisig);
+    if (!taprootMultisig)
+        return;
+    const address = taprootMultisig.address;
+    const pubkeyList = taprootMultisig.cosigner;
+    const threshold = taprootMultisig.threshold;
+    const privateKey = taprootMultisig.privateKey;
+    const leafPubkeys = pubkeyList.map((pubkey) => (0, bip371_1.toXOnly)(Buffer.from(pubkey, "hex")));
+    const multiSigWallet = new mutisigWallet_1.TaprootMultisigWallet(leafPubkeys, threshold, Buffer.from(privateKey, "hex"), bip341_1.LEAF_VERSION_TAPSCRIPT).setNetwork(network);
+    const psbt = new bitcoin.Psbt({ network });
+    const feeRate = (yield (0, psbt_service_1.getFeeRate)()) * 1.7;
+    const btcUtxos = yield (0, psbt_service_1.getBtcUtxoByAddress)(address);
+    const inscriptionData = yield (0, function_1.getInscriptionData)(multiSigWallet.address, inscriptionId);
+    multiSigWallet.addInput(psbt, inscriptionData.txid, inscriptionData.vout, inscriptionData.satoshi);
+    psbt.addOutput({
+        address: destinationAddress,
+        value: inscriptionData.satoshi,
+    });
+    console.log("feeRate ==> ", feeRate);
+    // add btc utxo input
+    let totalBtcAmount = 0;
+    console.log("btcUtxos ==> ", btcUtxos);
+    for (const btcutxo of btcUtxos) {
+        const fee = (0, psbt_service_1.calculateTxFee)(psbt, feeRate);
+        if (totalBtcAmount < fee + 10000 && btcutxo.value > 10000) {
+            totalBtcAmount += btcutxo.value;
+            multiSigWallet.addInput(psbt, btcutxo.txid, btcutxo.vout, btcutxo.value);
+        }
+    }
+    const fee = (0, psbt_service_1.calculateTxFee)(psbt, feeRate);
+    console.log("Pay Fee in batch transfer =====================>", fee);
+    console.log("totalBtcAmount in batch transfer ====>", totalBtcAmount);
+    if (totalBtcAmount < fee)
+        throw "BTC balance is not enough";
+    psbt.addOutput({
+        address: multiSigWallet.address,
+        value: totalBtcAmount - fee,
+    });
+    const newRequest = new RequestModal_1.default({
+        musigId: id,
+        type: "OrdinalsTransfer" /* RequestType.OrdinalsTransfer */,
+        transferAmount: amount,
+        destinationAddress: destinationAddress,
+        creator: ordinalAddress,
+        cosigner: pubkeyList,
+        signedCosigner: [],
+        psbt: [psbt.toHex()],
+        threshold,
+        assets: taprootMultisig.assets,
+        pending: "",
+    });
+    yield newRequest.save();
+    return psbt.toHex();
+});
+exports.sendOrdinalTaproot = sendOrdinalTaproot;
+const sendBrc20Taproot = (vaultId, inscriptionId, destination, ticker, amount, paymentAddress) => __awaiter(void 0, void 0, void 0, function* () {
+    const taprootMultisig = yield TaprootMultisig_1.default.findById(vaultId);
+    console.log(taprootMultisig);
+    if (!taprootMultisig)
+        return;
+    const address = taprootMultisig.address;
+    const pubkeyList = taprootMultisig.cosigner;
+    const threshold = taprootMultisig.threshold;
+    const privateKey = taprootMultisig.privateKey;
+    const leafPubkeys = pubkeyList.map((pubkey) => (0, bip371_1.toXOnly)(Buffer.from(pubkey, "hex")));
+    const multiSigWallet = new mutisigWallet_1.TaprootMultisigWallet(leafPubkeys, threshold, Buffer.from(privateKey, "hex"), bip341_1.LEAF_VERSION_TAPSCRIPT).setNetwork(network);
+    const psbt = new bitcoin.Psbt({ network });
+    const feeRate = (yield (0, psbt_service_1.getFeeRate)()) * 1.7;
+    const btcUtxos = yield (0, psbt_service_1.getBtcUtxoByAddress)(address);
+    const inscriptionData = yield (0, function_1.getInscriptionData)(multiSigWallet.address, inscriptionId);
+    multiSigWallet.addInput(psbt, inscriptionData.txid, inscriptionData.vout, inscriptionData.satoshi);
+    psbt.addOutput({
+        address: destination,
+        value: inscriptionData.satoshi,
+    });
+    console.log("feeRate ==> ", feeRate);
+    // add btc utxo input
+    let totalBtcAmount = 0;
+    console.log("btcUtxos ==> ", btcUtxos);
+    for (const btcutxo of btcUtxos) {
+        const fee = (0, psbt_service_1.calculateTxFee)(psbt, feeRate);
+        if (totalBtcAmount < fee + 10000 && btcutxo.value > 10000) {
+            totalBtcAmount += btcutxo.value;
+            multiSigWallet.addInput(psbt, btcutxo.txid, btcutxo.vout, btcutxo.value);
+        }
+    }
+    const fee = (0, psbt_service_1.calculateTxFee)(psbt, feeRate);
+    console.log("Pay Fee in batch transfer =====================>", fee);
+    console.log("totalBtcAmount in batch transfer ====>", totalBtcAmount);
+    if (totalBtcAmount < fee)
+        throw "BTC balance is not enough";
+    psbt.addOutput({
+        address: multiSigWallet.address,
+        value: totalBtcAmount - fee,
+    });
+    const newRequest = new RequestModal_1.default({
+        musigId: vaultId,
+        type: `${"Brc20" /* RequestType.Brc20 */}-${ticker.toUpperCase()}`,
+        transferAmount: amount,
+        destinationAddress: destination,
+        creator: paymentAddress,
+        cosigner: pubkeyList,
+        signedCosigner: [],
+        psbt: [psbt.toHex()],
+        threshold,
+        assets: taprootMultisig.assets,
+        pending: "",
+    });
+    yield newRequest.save();
+    return psbt.toHex();
+});
+exports.sendBrc20Taproot = sendBrc20Taproot;

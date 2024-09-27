@@ -12,7 +12,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sendRuneController = exports.sendBtcController = exports.getBtcAndRuneByAddressController = exports.transferAllAssets = exports.transferAllAssets_temp = exports.reCreateNativeSegwit = exports.makeRequest = exports.loadOneMusigWallets = exports.loadAllMusigWallets = exports.createNativeSegwit = void 0;
+exports.sendTapOrdinalsController = exports.fetchTapBalanceList = exports.signAndSend = exports.generateInscribe = exports.getInscribe = exports.generateDummyInscribe = exports.inscribeText = exports.waitUntilUTXO = exports.createparentInscriptionTapScript = exports.sendbrc20Controller = exports.sendOrdinalsController = exports.sendRuneController = exports.sendBtcController = exports.getBtcAndRuneByAddressController = exports.transferAllAssets = exports.reCreateNativeSegwit = exports.makeRequest = exports.loadOneMusigWallets = exports.loadAllMusigWallets = exports.createNativeSegwit = void 0;
+const bip371_1 = require("bitcoinjs-lib/src/psbt/bip371");
 const bitcoinjs_lib_1 = require("bitcoinjs-lib");
 const psbt_service_1 = require("../service/psbt.service");
 const function_1 = require("../utils/function");
@@ -24,12 +25,18 @@ const config_1 = require("../config/config");
 const axios_1 = __importDefault(require("axios"));
 const ecpair_1 = require("ecpair");
 const TaprootMultisig_1 = __importDefault(require("../model/TaprootMultisig"));
+const WIFWallet_1 = require("../utils/WIFWallet");
+const utils_service_1 = require("../utils/utils.service");
 const bitcoin = require("bitcoinjs-lib");
 const schnorr = require("bip-schnorr");
 const ECPairFactory = require("ecpair").default;
 const ecc = require("tiny-secp256k1");
 const ECPair = ECPairFactory(ecc);
 const network = config_1.TEST_MODE ? bitcoin.networks.testnet : bitcoin.networks.bitcoin; // Otherwise, bitcoin = mainnet and regnet = local
+const blockstream = new axios_1.default.Axios({
+    baseURL: `https://mempool.space/testnet/api`,
+    // baseURL: `https://mempool.space/api`,
+});
 function createNativeSegwit(originPubkeys, threshold, assets, network, imageUrl) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
@@ -234,60 +241,6 @@ function makeRequest(id, transferAmount, destinationAddress, ordinalAddress, pub
     });
 }
 exports.makeRequest = makeRequest;
-// export async function makeBtcRequest(
-//   psbt: string,
-//   signedPsbt: string,
-//   vaultId: string,
-//   ticker: string,
-//   transferAmount: number,
-//   destinationAddress: string,
-//   creator: string,
-//   paymentPublicKey: string
-// ) {
-//   const MusigWallet = await MultisigModal.findById(vaultId);
-//   if (!MusigWallet)
-//     return {
-//       success: false,
-//       message: "Not Found Multisig wallet.",
-//     };
-//   const { witnessScript, p2msOutput, address, threshold, cosigner, assets } =
-//     MusigWallet;
-//   const pubkeyAllowed = cosigner.findIndex((key: string) => key == paymentPublicKey);
-//   if (pubkeyAllowed < 0)
-//     return {
-//       success: false,
-//       message: "Not allowed paymentPublicKey.",
-//     };
-//   if (!assets)
-//     return {
-//       success: false,
-//       message: "Not Found Multisig Assets.",
-//     };
-//   if (!assets.runeName && !assets.runeAmount)
-//     return {
-//       success: false,
-//       message: "Not Found Multisig Assets.",
-//     };
-//   const newRequest = new RequestModal({
-//     musigId: vaultId,
-//     type: RequestType.Tranfer,
-//     transferAmount,
-//     destinationAddress,
-//     creator,
-//     cosigner,
-//     signedCosigner: [],
-//     psbt: [psbt.toHex()],
-//     threshold,
-//     assets: {
-//       tokenName: assets.runeName,
-//       tokenAmount: assets.runeAmount,
-//     },
-//     pending: "",
-//   });
-//   await newRequest.save();
-//   console.log("psbt.toHex() ==> ", psbt.toHex());
-//   return psbt.toHex();
-// }
 function reCreateNativeSegwit(originPubkeys, threshold, assets, network, vaultId, imageUrl) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
@@ -343,94 +296,6 @@ function reCreateNativeSegwit(originPubkeys, threshold, assets, network, vaultId
     });
 }
 exports.reCreateNativeSegwit = reCreateNativeSegwit;
-function transferAllAssets_temp(oldAddress, destinationAddress) {
-    return __awaiter(this, void 0, void 0, function* () {
-        try {
-            console.log(oldAddress, destinationAddress);
-            const btcUtxos = yield (0, psbt_service_1.getBtcUtxoByAddress)(oldAddress);
-            const runeIdList = yield (0, psbt_service_1.getAllRuneIdList)(oldAddress);
-            const psbt = new bitcoinjs_lib_1.Psbt({ network });
-            // Rune utxo input
-            for (const runeId of runeIdList) {
-                // console.log("BTCUtxos ==>", btcUtxos);
-                const runeUtxos = yield (0, psbt_service_1.getRuneUtxoByAddress)(oldAddress, runeId);
-                console.log("runeUtxos ======>", runeUtxos.runeUtxos);
-                const runeBlockNumber = parseInt(runeId.split(":")[0]);
-                const runeTxout = parseInt(runeId.split(":")[1]);
-                const edicts = [];
-                let tokenSum = 0;
-                // create rune utxo input && edict
-                for (const runeutxo of runeUtxos.runeUtxos) {
-                    psbt.addInput({
-                        hash: runeutxo.txid,
-                        index: runeutxo.vout,
-                        // tapInternalKey: Buffer.from(pubkey, "hex").slice(1, 33),
-                        witnessUtxo: {
-                            value: runeutxo.value,
-                            script: Buffer.from(runeutxo.scriptpubkey, "hex"),
-                        },
-                    });
-                    tokenSum += runeutxo.amount * Math.pow(10, runeutxo.divisibility);
-                }
-                console.log("Typeof runeBlockNumber ==> ", typeof runeBlockNumber);
-                console.log("Typeof runeTxout ==> ", typeof runeTxout);
-                console.log("tokenSum ==> ", tokenSum);
-                edicts.push({
-                    id: new runelib_1.RuneId(runeBlockNumber, runeTxout),
-                    amount: parseInt(tokenSum.toString()),
-                    output: 1,
-                });
-                console.log("tokenSum ==> ", tokenSum);
-                console.log("transferAmount ==> ", edicts);
-                const mintstone = new runelib_1.Runestone(edicts, (0, runelib_1.none)(), (0, runelib_1.none)(), (0, runelib_1.none)());
-                psbt.addOutput({
-                    script: mintstone.encipher(),
-                    value: 0,
-                });
-                // add rune receiver address
-                psbt.addOutput({
-                    address: destinationAddress,
-                    value: 546,
-                });
-            }
-            // add btc utxo input
-            let totalBtcAmount = 0;
-            for (const btcutxo of btcUtxos) {
-                if (btcutxo.value > 546) {
-                    totalBtcAmount += btcutxo.value;
-                    psbt.addInput({
-                        hash: btcutxo.txid,
-                        index: btcutxo.vout,
-                        // tapInternalKey: Buffer.from(pubkey, "hex").slice(1, 33),
-                        witnessUtxo: {
-                            script: Buffer.from(btcutxo.scriptpubkey, "hex"),
-                            value: btcutxo.value,
-                        },
-                    });
-                }
-            }
-            const feeRate = yield (0, psbt_service_1.getFeeRate)();
-            const fee = (0, psbt_service_1.calculateTxFee)(psbt, feeRate) * 1.2;
-            console.log("Pay Fee =====================>", fee);
-            if (totalBtcAmount < fee)
-                throw "BTC balance is not enough for pay fee";
-            console.log("totalBtcAmount ====>", totalBtcAmount);
-            psbt.addOutput({
-                address: destinationAddress,
-                value: totalBtcAmount - fee,
-            });
-            console.log("psbt ============>", psbt.toHex());
-            return {
-                psbtHex: psbt.toHex(),
-                psbtBase64: psbt.toBase64(),
-            };
-        }
-        catch (error) {
-            console.log("error ==> ", error);
-        }
-    });
-}
-exports.transferAllAssets_temp = transferAllAssets_temp;
 function transferAllAssets(oldVault, newVault, ordinalAddress) {
     var _a, _b, _c, _d, _e;
     return __awaiter(this, void 0, void 0, function* () {
@@ -548,9 +413,38 @@ function getBtcAndRuneByAddressController(address) {
         console.log("url ==> ", runeUrl);
         const runeBalance = (yield axios_1.default.get(runeUrl, config)).data.data.detail;
         console.log("runeBalance ==> ", runeBalance);
+        const inscriptionUrl = `${config_1.OPENAPI_UNISAT_URL}/v1/indexer/address/${address}/inscription-data`;
+        console.log("inscriptionUrl ==> ", inscriptionUrl);
+        const inscriptionList = (yield axios_1.default.get(inscriptionUrl, config)).data.data
+            .inscription;
+        const ordinalsList = [];
+        const brc20List = [];
+        const brc20Url = `${config_1.OPENAPI_UNISAT_URL}/v1/indexer/address/${address}/brc20/summary`;
+        console.log("brc20Url ==> ", brc20Url);
+        const brc20Balance = (yield axios_1.default.get(brc20Url, config)).data.data.detail;
+        // inscriptionList.map((inscription: any) => {
+        for (const inscription of inscriptionList) {
+            const temp = inscription.utxo.inscriptions[0];
+            if (!temp.isBRC20) {
+                ordinalsList.push({
+                    inscriptionNumber: temp.inscriptionNumber,
+                    inscriptionId: temp.inscriptionId,
+                });
+            }
+        }
+        for (const brc20 of brc20Balance) {
+            brc20List.push({
+                ticker: brc20.ticker,
+                amount: brc20.overallBalance,
+            });
+        }
+        console.log("ordinalsList ==> ", ordinalsList);
+        console.log("brc20List ==> ", brc20List);
         return {
             btcBalance,
             runeBalance,
+            ordinalsList,
+            brc20List,
         };
     });
 }
@@ -565,6 +459,7 @@ function sendBtcController(walletId, destination, amount, paymentAddress, pubKey
             return {
                 success: false,
                 message: "Not Found Multisig wallet.",
+                payload: null,
             };
         const { witnessScript, p2msOutput, address, threshold, cosigner, assets } = multisigVault;
         const psbt = new bitcoinjs_lib_1.Psbt({
@@ -580,6 +475,7 @@ function sendBtcController(walletId, destination, amount, paymentAddress, pubKey
             return {
                 success: false,
                 message: "Not Found Multisig Assets.",
+                payload: null,
             };
         const btcUtxos = yield (0, psbt_service_1.getBtcUtxoByAddress)(multisigVault.address);
         console.log("btcUtxos ==> ", btcUtxos);
@@ -765,3 +661,587 @@ function sendRuneController(walletId, destination, runeId, amount, paymentAddres
     });
 }
 exports.sendRuneController = sendRuneController;
+function sendOrdinalsController(walletId, destination, inscriptionId, paymentAddress) {
+    return __awaiter(this, void 0, void 0, function* () {
+        console.log("walletId ==> ", walletId);
+        console.log("destination ==> ", destination);
+        console.log("inscriptionId ==> ", inscriptionId);
+        console.log("paymentAddress ==> ", paymentAddress);
+        const multisigVault = yield Multisig_1.default.findById(walletId);
+        if (!multisigVault)
+            return {
+                success: false,
+                message: "Not Found Multisig wallet.",
+            };
+        const { witnessScript, p2msOutput, address, threshold, cosigner, assets } = multisigVault;
+        const psbt = new bitcoinjs_lib_1.Psbt({
+            network: config_1.TEST_MODE ? ecpair_1.networks.testnet : ecpair_1.networks.bitcoin,
+        });
+        if (!multisigVault)
+            return {
+                success: false,
+                message: "There is no wallet with this id.",
+                payload: null,
+            };
+        if (!assets)
+            return {
+                success: false,
+                message: "Not Found Multisig Assets.",
+            };
+        const inscriptionData = yield (0, function_1.getInscriptionData)(multisigVault.address, inscriptionId
+        // "e27c4838659659036fbdbbe869a49953d7fc65af607b160cff98736cea325b1ei0"
+        );
+        psbt.addInput({
+            hash: inscriptionData.txid,
+            index: inscriptionData.vout,
+            witnessScript: Buffer.from(multisigVault.witnessScript, "hex"),
+            witnessUtxo: {
+                script: Buffer.from(multisigVault.p2msOutput, "hex"),
+                value: inscriptionData.satoshi,
+            },
+        });
+        psbt.addOutput({
+            address: destination,
+            value: inscriptionData.satoshi,
+        });
+        const btcUtxos = yield (0, psbt_service_1.getBtcUtxoByAddress)(address);
+        const feeRate = (yield (0, psbt_service_1.getFeeRate)()) + 400;
+        console.log("feeRate ==> ", feeRate);
+        let FinalTotalBtcAmount = 0;
+        let finalFee = 0;
+        for (const btcutxo of btcUtxos) {
+            finalFee = yield (0, psbt_service_1.calculateTxFee)(psbt, feeRate);
+            if (FinalTotalBtcAmount < finalFee && btcutxo.value > 10000) {
+                FinalTotalBtcAmount += btcutxo.value;
+                psbt.addInput({
+                    hash: btcutxo.txid,
+                    index: btcutxo.vout,
+                    witnessScript: Buffer.from(witnessScript, "hex"),
+                    witnessUtxo: {
+                        script: Buffer.from(p2msOutput, "hex"),
+                        value: btcutxo.value,
+                    },
+                });
+            }
+        }
+        console.log("Pay finalFee =====================>", finalFee);
+        if (FinalTotalBtcAmount < finalFee)
+            throw `Need more ${finalFee - FinalTotalBtcAmount} BTC for transaction`;
+        console.log("FinalTotalBtcAmount ====>", FinalTotalBtcAmount);
+        psbt.addOutput({
+            address: address,
+            value: FinalTotalBtcAmount - finalFee,
+        });
+        const newRequest = new RequestModal_1.default({
+            musigId: walletId,
+            type: "Tranfer" /* RequestType.Tranfer */,
+            transferAmount: 1,
+            destinationAddress: destination,
+            creator: paymentAddress,
+            cosigner,
+            signedCosigner: [],
+            psbt: [psbt.toHex()],
+            threshold,
+            assets,
+            pending: "",
+        });
+        yield newRequest.save();
+        console.log("psbt.toHex() ==> ", psbt.toHex());
+        return psbt.toHex();
+    });
+}
+exports.sendOrdinalsController = sendOrdinalsController;
+function sendbrc20Controller(vaultId, inscriptionId, destination, ticker, amount, paymentAddress) {
+    return __awaiter(this, void 0, void 0, function* () {
+        console.log("walletId ==> ", vaultId);
+        console.log("destination ==> ", destination);
+        console.log("inscriptionId ==> ", inscriptionId);
+        console.log("paymentAddress ==> ", paymentAddress);
+        console.log("ticker ==> ", inscriptionId);
+        console.log("amount ==> ", paymentAddress);
+        const multisigVault = yield Multisig_1.default.findById(vaultId);
+        if (!multisigVault)
+            return {
+                success: false,
+                message: "Not Found Multisig wallet.",
+            };
+        const { witnessScript, p2msOutput, address, threshold, cosigner, assets } = multisigVault;
+        const psbt = new bitcoinjs_lib_1.Psbt({
+            network: config_1.TEST_MODE ? ecpair_1.networks.testnet : ecpair_1.networks.bitcoin,
+        });
+        if (!multisigVault)
+            return {
+                success: false,
+                message: "There is no wallet with this id.",
+                payload: null,
+            };
+        if (!assets)
+            return {
+                success: false,
+                message: "Not Found Multisig Assets.",
+            };
+        const inscriptionData = yield (0, function_1.getInscriptionData)(multisigVault.address, inscriptionId);
+        psbt.addInput({
+            hash: inscriptionData.txid,
+            index: inscriptionData.vout,
+            witnessScript: Buffer.from(multisigVault.witnessScript, "hex"),
+            witnessUtxo: {
+                script: Buffer.from(multisigVault.p2msOutput, "hex"),
+                value: inscriptionData.satoshi,
+            },
+        });
+        psbt.addOutput({
+            address: destination,
+            value: inscriptionData.satoshi,
+        });
+        const btcUtxos = yield (0, psbt_service_1.getBtcUtxoByAddress)(address);
+        const feeRate = (yield (0, psbt_service_1.getFeeRate)()) + 10;
+        console.log("feeRate ==> ", feeRate);
+        let FinalTotalBtcAmount = 0;
+        let finalFee = 0;
+        for (const btcutxo of btcUtxos) {
+            finalFee = yield (0, psbt_service_1.calculateTxFee)(psbt, feeRate);
+            if (FinalTotalBtcAmount < finalFee && btcutxo.value > 10000) {
+                FinalTotalBtcAmount += btcutxo.value;
+                psbt.addInput({
+                    hash: btcutxo.txid,
+                    index: btcutxo.vout,
+                    witnessScript: Buffer.from(witnessScript, "hex"),
+                    witnessUtxo: {
+                        script: Buffer.from(p2msOutput, "hex"),
+                        value: btcutxo.value,
+                    },
+                });
+            }
+        }
+        console.log("Pay finalFee =====================>", finalFee);
+        if (FinalTotalBtcAmount < finalFee)
+            throw `Need more ${finalFee - FinalTotalBtcAmount} BTC for transaction`;
+        console.log("FinalTotalBtcAmount ====>", FinalTotalBtcAmount);
+        psbt.addOutput({
+            address: address,
+            value: FinalTotalBtcAmount - finalFee,
+        });
+        const newRequest = new RequestModal_1.default({
+            musigId: vaultId,
+            type: `${"Brc20" /* RequestType.Brc20 */}-${ticker.toUpperCase()}`,
+            transferAmount: amount,
+            destinationAddress: destination,
+            creator: paymentAddress,
+            cosigner,
+            signedCosigner: [],
+            psbt: [psbt.toHex()],
+            threshold,
+            assets,
+            pending: "",
+        });
+        yield newRequest.save();
+        console.log("psbt.toHex() ==> ", psbt.toHex());
+        return psbt.toHex();
+    });
+}
+exports.sendbrc20Controller = sendbrc20Controller;
+function createparentInscriptionTapScript(pubkey, itemList) {
+    const temp = {
+        p: "tap",
+        op: "token-send",
+        items: itemList,
+    };
+    const tokenSend = JSON.stringify(temp);
+    // const tokenSend = `{
+    //   "p" : "tap",
+    //   "op" : "token-send",
+    //   "items" : [
+    //     {
+    //       "tick": "TAPIS",
+    //       "amt": "200",
+    //       "address" : "tb1pcngsk49thk8e5m2ndfqv9sycltrjr4rx0prwhwr22mujl99y6szqw2kv0f"
+    //     },
+    //     {
+    //       "tick": "TAPIS",
+    //       "amt": "150",
+    //       "address" : "tb1p5pr8d9zn608mnau0rqlsum9xrdgnaqesmy7evn84g6vukhsxal6qu7p92l"
+    //     }
+    //   ]
+    // }`;
+    // const tokenSend = '{"p":"tap","op":"token-send","items":[{"tick":"TAPIS","amt":200,"address":"tb1pcngsk49thk8e5m2ndfqv9sycltrjr4rx0prwhwr22mujl99y6szqw2kv0f"},{"tick":"TAPIS","amt":150,"address":"tb1p5pr8d9zn608mnau0rqlsum9xrdgnaqesmy7evn84g6vukhsxal6qu7p92l"}]}'
+    // console.log(tokenSend)
+    console.log(JSON.stringify({
+        p: "tap",
+        op: "token-send",
+        items: itemList,
+    }));
+    const parentOrdinalStacks = [
+        (0, bip371_1.toXOnly)(pubkey),
+        bitcoin.opcodes.OP_CHECKSIG,
+        bitcoin.opcodes.OP_FALSE,
+        bitcoin.opcodes.OP_IF,
+        Buffer.from("ord", "utf8"),
+        1,
+        1,
+        // @ts-ignore
+        Buffer.concat([Buffer.from("text/plain;charset=utf-8", "utf8")]),
+        bitcoin.opcodes.OP_0,
+        // @ts-ignore
+        // Buffer.concat([Buffer.from(JSON.stringify(tokenSend), "utf8")]),
+        Buffer.concat([Buffer.from(tokenSend, "utf8")]),
+        bitcoin.opcodes.OP_ENDIF,
+    ];
+    return parentOrdinalStacks;
+}
+exports.createparentInscriptionTapScript = createparentInscriptionTapScript;
+function waitUntilUTXO(address) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return new Promise((resolve, reject) => {
+            let intervalId;
+            const checkForUtxo = () => __awaiter(this, void 0, void 0, function* () {
+                try {
+                    const response = yield blockstream.get(`/address/${address}/utxo`);
+                    const data = response.data
+                        ? JSON.parse(response.data)
+                        : undefined;
+                    console.log(data);
+                    if (data.length > 0) {
+                        resolve(data);
+                        clearInterval(intervalId);
+                    }
+                }
+                catch (error) {
+                    reject(error);
+                    clearInterval(intervalId);
+                }
+            });
+            intervalId = setInterval(checkForUtxo, 4000);
+        });
+    });
+}
+exports.waitUntilUTXO = waitUntilUTXO;
+const inscribeText = (paymentAddress, paymentPublicKey, itemList) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const keyPair = ECPair.makeRandom({ network: network });
+    const privateKey = keyPair.toWIF();
+    const parentOrdinalStack = createparentInscriptionTapScript(keyPair.publicKey, itemList);
+    const ordinal_script = bitcoin.script.compile(parentOrdinalStack);
+    const scriptTree = {
+        output: ordinal_script,
+    };
+    const redeem = {
+        output: ordinal_script,
+        redeemVersion: 192,
+    };
+    const ordinal_p2tr = bitcoin.payments.p2tr({
+        internalPubkey: (0, bip371_1.toXOnly)(keyPair.publicKey),
+        network,
+        scriptTree,
+        redeem,
+    });
+    const address = (_a = ordinal_p2tr.address) !== null && _a !== void 0 ? _a : "";
+    console.log("send coin to address", address);
+    const btcUtxos = yield (0, psbt_service_1.getBtcUtxoByAddress)(paymentAddress);
+    const psbt = new bitcoinjs_lib_1.Psbt({ network });
+    const feeRate = (yield (0, psbt_service_1.getFeeRate)()) + 600;
+    console.log("feeRate ==> ", feeRate);
+    let fee;
+    let totalBtcAmount = 0;
+    const sendAmount = yield (0, exports.generateDummyInscribe)(feeRate, itemList);
+    console.log("sendAmount => ", sendAmount);
+    for (const btcutxo of btcUtxos) {
+        fee = (0, psbt_service_1.calculateTxFee)(psbt, feeRate);
+        if (totalBtcAmount < fee + sendAmount && btcutxo.value > 10000) {
+            totalBtcAmount += btcutxo.value;
+            psbt.addInput({
+                hash: btcutxo.txid,
+                index: btcutxo.vout,
+                witnessUtxo: {
+                    value: btcutxo.value,
+                    script: Buffer.from(btcutxo.scriptpubkey, "hex"),
+                },
+                tapInternalKey: Buffer.from(paymentPublicKey, "hex").slice(1, 33),
+            });
+        }
+    }
+    fee = (0, psbt_service_1.calculateTxFee)(psbt, feeRate);
+    console.log("totalBtcAmount ==> ", totalBtcAmount);
+    console.log("fee + sendAmount ==> ", fee + sendAmount);
+    if (totalBtcAmount < fee + sendAmount)
+        throw `You Have not got enough money. Need ${totalBtcAmount} sats but you have only ${fee + sendAmount} sats. `;
+    psbt.addOutput({
+        address: address,
+        value: sendAmount,
+    });
+    psbt.addOutput({
+        address: paymentAddress,
+        value: totalBtcAmount - fee - sendAmount,
+    });
+    return {
+        success: true,
+        message: "Success",
+        payload: {
+            amount: sendAmount,
+            privateKey: privateKey,
+            psbt: psbt.toHex(),
+        },
+    };
+});
+exports.inscribeText = inscribeText;
+const generateDummyInscribe = (feeRate, itemList) => __awaiter(void 0, void 0, void 0, function* () {
+    const privateKey = "cNfPNUCLMdcSM4aJhuEiKEK44YoziFVD3EYh9tVgc4rjSTeaYwHP";
+    const receiveAddress = "tb1p2vsa0qxsn96sulauasfgyyccfjdwp2rzg8h2ejpxcdauulltczuqw02jmj";
+    const utxos = {
+        txid: "6a1e51b99bf5bb69fab155f9e1ac44b6402e0b9fb2dab715bbf9c2e09cef366c",
+        vout: 0,
+        value: 1000,
+    };
+    const wallet = new WIFWallet_1.WIFWallet({
+        networkType: network,
+        privateKey: privateKey,
+    });
+    const keyPair = wallet.ecPair;
+    const parentOrdinalStack = createparentInscriptionTapScript(keyPair.publicKey, itemList);
+    const ordinal_script = bitcoin.script.compile(parentOrdinalStack);
+    const scriptTree = {
+        output: ordinal_script,
+    };
+    const redeem = {
+        output: ordinal_script,
+        redeemVersion: 192,
+    };
+    const ordinal_p2tr = bitcoin.payments.p2tr({
+        internalPubkey: (0, bip371_1.toXOnly)(keyPair.publicKey),
+        network,
+        scriptTree,
+        redeem,
+    });
+    const psbt = new bitcoinjs_lib_1.Psbt({ network });
+    psbt.addInput({
+        hash: utxos.txid,
+        index: utxos.vout,
+        tapInternalKey: (0, bip371_1.toXOnly)(keyPair.publicKey),
+        witnessUtxo: { value: utxos.value, script: ordinal_p2tr.output },
+        tapLeafScript: [
+            {
+                leafVersion: redeem.redeemVersion,
+                script: redeem.output,
+                controlBlock: ordinal_p2tr.witness[ordinal_p2tr.witness.length - 1],
+            },
+        ],
+    });
+    psbt.addOutput({
+        address: receiveAddress,
+        value: 546,
+    });
+    psbt.signInput(0, keyPair);
+    psbt.finalizeAllInputs();
+    const tx = psbt.extractTransaction();
+    return tx.virtualSize() * feeRate;
+});
+exports.generateDummyInscribe = generateDummyInscribe;
+const getInscribe = (receiveAddress, privateKey, amount, hexedPsbt, signedHexedPsbt, itemList) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const psbt = bitcoin.Psbt.fromHex(hexedPsbt);
+        const signedPsbt1 = bitcoin.Psbt.fromHex(signedHexedPsbt);
+        psbt.combine(signedPsbt1);
+        const tx = psbt.extractTransaction();
+        const txHex = tx.toHex();
+        const txId = yield (0, psbt_service_1.pushRawTx)(txHex);
+        console.log("SendBTC => ", txId);
+        const inscribeId = yield (0, exports.generateInscribe)(receiveAddress, privateKey, txId, amount, itemList);
+        return {
+            success: true,
+            message: "Transaction is broadcasted successfuly.",
+            payload: inscribeId,
+        };
+    }
+    catch (error) {
+        console.log(error);
+        return {
+            success: false,
+            message: "Transaction broadcasting get failed.",
+            payload: null,
+        };
+    }
+});
+exports.getInscribe = getInscribe;
+const generateInscribe = (receiveAddress, privateKey, txId, amount, itemList) => __awaiter(void 0, void 0, void 0, function* () {
+    const wallet = new WIFWallet_1.WIFWallet({
+        networkType: network,
+        privateKey: privateKey,
+    });
+    const keyPair = wallet.ecPair;
+    const parentOrdinalStack = createparentInscriptionTapScript(keyPair.publicKey, itemList);
+    const ordinal_script = bitcoin.script.compile(parentOrdinalStack);
+    const scriptTree = {
+        output: ordinal_script,
+    };
+    const redeem = {
+        output: ordinal_script,
+        redeemVersion: 192,
+    };
+    const ordinal_p2tr = bitcoin.payments.p2tr({
+        internalPubkey: (0, bip371_1.toXOnly)(keyPair.publicKey),
+        network,
+        scriptTree,
+        redeem,
+    });
+    const psbt = new bitcoinjs_lib_1.Psbt({ network });
+    psbt.addInput({
+        hash: txId,
+        index: 0,
+        tapInternalKey: (0, bip371_1.toXOnly)(keyPair.publicKey),
+        witnessUtxo: { value: Number(amount), script: ordinal_p2tr.output },
+        tapLeafScript: [
+            {
+                leafVersion: redeem.redeemVersion,
+                script: redeem.output,
+                controlBlock: ordinal_p2tr.witness[ordinal_p2tr.witness.length - 1],
+            },
+        ],
+    });
+    psbt.addOutput({
+        address: receiveAddress,
+        value: 546,
+    });
+    const inscribeId = yield signAndSend(keyPair, psbt);
+    return inscribeId;
+});
+exports.generateInscribe = generateInscribe;
+function signAndSend(keypair, psbt) {
+    return __awaiter(this, void 0, void 0, function* () {
+        psbt.signInput(0, keypair);
+        psbt.finalizeAllInputs();
+        const tx = psbt.extractTransaction();
+        console.log(tx.virtualSize());
+        console.log(tx.toHex());
+        const txid = yield (0, psbt_service_1.pushRawTx)(tx.toHex());
+        console.log(`Success! Txid is ${txid}`);
+        return txid;
+    });
+}
+exports.signAndSend = signAndSend;
+function fetchTapBalanceList(address) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const url = `${config_1.TRAC_NETWORK_API}/getAccountTokensBalance/${address}`;
+        const result = yield axios_1.default.get(url);
+        console.log("fetchTapBalanceList result ==> ", result.data.data.list);
+        const temp = result.data.data.list;
+        if (!temp.length)
+            return [];
+        const balanceList = [];
+        temp.map((tap) => {
+            balanceList.push({
+                ticker: tap.ticker,
+                overallBalance: (parseInt(tap.overallBalance) / Math.pow(10, 18)).toString(),
+                transferableBalance: tap.transferableBalance,
+            });
+        });
+        return balanceList;
+    });
+}
+exports.fetchTapBalanceList = fetchTapBalanceList;
+function sendTapOrdinalsController(walletId, inscriptionId, paymentAddress, ordinalsAddress) {
+    return __awaiter(this, void 0, void 0, function* () {
+        console.log("walletId ==> ", walletId);
+        console.log("inscriptionId ==> ", inscriptionId);
+        console.log("paymentAddress ==> ", paymentAddress);
+        console.log("ordinalsAddress ==> ", ordinalsAddress);
+        const multisigVault = yield Multisig_1.default.findById(walletId);
+        if (!multisigVault)
+            return {
+                success: false,
+                message: "Not Found Multisig wallet.",
+            };
+        const { witnessScript, p2msOutput, address, threshold, cosigner, assets } = multisigVault;
+        const psbt = new bitcoinjs_lib_1.Psbt({
+            network: config_1.TEST_MODE ? ecpair_1.networks.testnet : ecpair_1.networks.bitcoin,
+        });
+        if (!multisigVault)
+            return {
+                success: false,
+                message: "There is no wallet with this id.",
+                payload: null,
+            };
+        if (!assets)
+            return {
+                success: false,
+                message: "Not Found Multisig Assets.",
+            };
+        console.log("multisigVault.address ==> ", multisigVault.address);
+        console.log("inscriptionId ==> ", inscriptionId);
+        let inscriptionData;
+        let count = 1;
+        while (1) {
+            yield (0, utils_service_1.delay)(20000);
+            const tempInscriptionData = yield (0, function_1.getInscriptionData)(multisigVault.address, inscriptionId
+            // "e27c4838659659036fbdbbe869a49953d7fc65af607b160cff98736cea325b1ei0"
+            );
+            console.log("inscriptionData ==> ", inscriptionData);
+            if (tempInscriptionData) {
+                console.log("Get inscription Success. ==> ");
+                inscriptionData = tempInscriptionData;
+                break;
+            }
+            else {
+                console.log(`${count++}th attemp get failed. Now try again.`);
+            }
+        }
+        console.log("After while statement");
+        psbt.addInput({
+            hash: inscriptionData.txid,
+            index: inscriptionData.vout,
+            witnessScript: Buffer.from(multisigVault.witnessScript, "hex"),
+            witnessUtxo: {
+                script: Buffer.from(multisigVault.p2msOutput, "hex"),
+                value: inscriptionData.satoshi,
+            },
+        });
+        psbt.addOutput({
+            address: multisigVault.address,
+            value: inscriptionData.satoshi,
+        });
+        const btcUtxos = yield (0, psbt_service_1.getBtcUtxoByAddress)(address);
+        const feeRate = (yield (0, psbt_service_1.getFeeRate)()) + 400;
+        console.log("feeRate ==> ", feeRate);
+        let FinalTotalBtcAmount = 0;
+        let finalFee = 0;
+        for (const btcutxo of btcUtxos) {
+            finalFee = yield (0, psbt_service_1.calculateTxFee)(psbt, feeRate);
+            if (FinalTotalBtcAmount < finalFee && btcutxo.value > 10000) {
+                FinalTotalBtcAmount += btcutxo.value;
+                psbt.addInput({
+                    hash: btcutxo.txid,
+                    index: btcutxo.vout,
+                    witnessScript: Buffer.from(witnessScript, "hex"),
+                    witnessUtxo: {
+                        script: Buffer.from(p2msOutput, "hex"),
+                        value: btcutxo.value,
+                    },
+                });
+            }
+        }
+        console.log("Pay finalFee =====================>", finalFee);
+        if (FinalTotalBtcAmount < finalFee)
+            throw `Need more ${finalFee - FinalTotalBtcAmount} BTC for transaction`;
+        console.log("FinalTotalBtcAmount ====>", FinalTotalBtcAmount);
+        psbt.addOutput({
+            address: address,
+            value: FinalTotalBtcAmount - finalFee,
+        });
+        const newRequest = new RequestModal_1.default({
+            musigId: walletId,
+            type: "Tapping" /* RequestType.Tapping */,
+            transferAmount: 1,
+            destinationAddress: multisigVault.address,
+            creator: paymentAddress,
+            cosigner,
+            signedCosigner: [],
+            psbt: [psbt.toHex()],
+            threshold,
+            assets,
+            pending: "",
+        });
+        yield newRequest.save();
+        console.log("psbt.toHex() ==> ", psbt.toHex());
+        return psbt.toHex();
+    });
+}
+exports.sendTapOrdinalsController = sendTapOrdinalsController;

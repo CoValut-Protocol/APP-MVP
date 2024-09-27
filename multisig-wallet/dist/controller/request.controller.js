@@ -12,21 +12,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.test = exports.cancelUpdateForRequest = exports.updateRequest = exports.getPsbtFromRequest = exports.getOneRequestList = exports.getAllRequestList = void 0;
+exports.checkingBrc20Request = exports.test = exports.cancelUpdateForRequest = exports.updateRequest = exports.getPsbtFromRequest = exports.getOneRequestList = exports.getAllRequestList = void 0;
 const bitcoinjs_lib_1 = require("bitcoinjs-lib");
 const psbt_service_1 = require("../service/psbt.service");
 const Multisig_1 = __importDefault(require("../model/Multisig"));
 const RequestModal_1 = __importDefault(require("../model/RequestModal"));
 const TempMultisig_1 = __importDefault(require("../model/TempMultisig"));
-const config_1 = require("../config/config");
-const bitcoin = require("bitcoinjs-lib");
-const schnorr = require("bip-schnorr");
-const ECPairFactory = require("ecpair").default;
-const ecc = require("tiny-secp256k1");
-const fs = require("fs");
-const { alice, bob, carol, dave } = require("./wallets.json");
-const ECPair = ECPairFactory(ecc);
-const network = config_1.TEST_MODE ? bitcoin.networks.testnet : bitcoin.networks.bitcoin; // Otherwise, bitcoin = mainnet and regnet = local
+const TaprootMultisig_1 = __importDefault(require("../model/TaprootMultisig"));
+const TempTaprootMultisig_1 = __importDefault(require("../model/TempTaprootMultisig"));
 function getAllRequestList() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
@@ -66,13 +59,25 @@ function getPsbtFromRequest(id, pubkey) {
             console.log("requestData ==> ", requestData);
             const muSigId = requestData === null || requestData === void 0 ? void 0 : requestData.musigId;
             const muSigWallet = yield Multisig_1.default.findById(muSigId);
-            if (!muSigWallet)
+            const taprootWallet = yield TaprootMultisig_1.default.findById(muSigId);
+            console.log("muSigWallet ==> ", muSigWallet);
+            console.log("taprootWallet ==> ", taprootWallet);
+            if (!muSigWallet && !taprootWallet)
                 return {
                     success: false,
                     message: "There is no MuSig Wallet relative with request",
                     payload: null,
                 };
-            const isAllowed = muSigWallet === null || muSigWallet === void 0 ? void 0 : muSigWallet.cosigner.findIndex((key) => key == pubkey);
+            const isAllowed = muSigWallet
+                ? muSigWallet === null || muSigWallet === void 0 ? void 0 : muSigWallet.cosigner.findIndex((key) => key == pubkey)
+                : taprootWallet === null || taprootWallet === void 0 ? void 0 : taprootWallet.cosigner.findIndex((key) => key == pubkey);
+            console.log("isAllowed ==> ", isAllowed);
+            if (!isAllowed && isAllowed != 0)
+                return {
+                    success: false,
+                    message: "There is no isAllowed in this request.",
+                    payload: null,
+                };
             if (isAllowed < 0)
                 return {
                     success: false,
@@ -132,13 +137,26 @@ function updateRequest(id, psbt, pubkey) {
                 };
             const muSigId = requestData === null || requestData === void 0 ? void 0 : requestData.musigId;
             const muSigWallet = yield Multisig_1.default.findById(muSigId);
-            if (!muSigWallet)
+            const taprootWallet = yield TaprootMultisig_1.default.findById(muSigId);
+            const vaultType = muSigWallet ? "NativeSegwit" : "Taproot";
+            console.log("muSigWallet ==> ", muSigWallet);
+            console.log("taprootWallet ==> ", taprootWallet);
+            if (!muSigWallet && !taprootWallet)
                 return {
                     success: false,
-                    message: "There is no MuSig Wallet",
+                    message: "There is no MuSig Wallet relative with request",
                     payload: null,
                 };
-            const isAllowed = muSigWallet === null || muSigWallet === void 0 ? void 0 : muSigWallet.cosigner.findIndex((key) => key == pubkey);
+            const isAllowed = muSigWallet
+                ? muSigWallet === null || muSigWallet === void 0 ? void 0 : muSigWallet.cosigner.findIndex((key) => key == pubkey)
+                : taprootWallet === null || taprootWallet === void 0 ? void 0 : taprootWallet.cosigner.findIndex((key) => key == pubkey);
+            console.log("isAllowed ==> ", isAllowed);
+            if (!isAllowed && isAllowed != 0)
+                return {
+                    success: false,
+                    message: "There is no isAllowed in this request.",
+                    payload: null,
+                };
             if (isAllowed < 0)
                 return {
                     success: false,
@@ -182,27 +200,52 @@ function updateRequest(id, psbt, pubkey) {
                             };
                         // Remove old one and add new one into vault db.
                         if (requestData.type == "VaultUpgrade") {
-                            const newTempVault = yield TempMultisig_1.default.findOne({
-                                address: requestData.destinationAddress,
-                            });
-                            console.log("newTempVault ==> ", newTempVault);
-                            if (!newTempVault)
-                                return {
-                                    success: true,
-                                    message: "Transaction broadcasting But not updated DB.",
-                                    payload: txID,
-                                };
-                            const updatedVault = yield Multisig_1.default.findByIdAndUpdate(requestData.musigId, {
-                                cosigner: newTempVault.cosigner,
-                                witnessScript: newTempVault.witnessScript,
-                                p2msOutput: newTempVault.p2msOutput,
-                                address: newTempVault.address,
-                                threshold: newTempVault.threshold,
-                                assets: newTempVault.assets,
-                                imageUrl: newTempVault.imageUrl,
-                            });
-                            yield (updatedVault === null || updatedVault === void 0 ? void 0 : updatedVault.save());
-                            console.log("updatedVault Saved ==> ");
+                            if (vaultType == "NativeSegwit") {
+                                const newTempVault = yield TempMultisig_1.default.findOne({
+                                    address: requestData.destinationAddress,
+                                });
+                                console.log("newTempVault ==> ", newTempVault);
+                                if (!newTempVault)
+                                    return {
+                                        success: true,
+                                        message: "Transaction broadcasting But not updated DB.",
+                                        payload: txID,
+                                    };
+                                const updatedVault = yield Multisig_1.default.findByIdAndUpdate(requestData.musigId, {
+                                    cosigner: newTempVault.cosigner,
+                                    witnessScript: newTempVault.witnessScript,
+                                    p2msOutput: newTempVault.p2msOutput,
+                                    address: newTempVault.address,
+                                    threshold: newTempVault.threshold,
+                                    assets: newTempVault.assets,
+                                    imageUrl: newTempVault.imageUrl,
+                                });
+                                yield (updatedVault === null || updatedVault === void 0 ? void 0 : updatedVault.save());
+                                console.log("updatedVault Saved ==> ");
+                            }
+                            else {
+                                const newTempVault = yield TempTaprootMultisig_1.default.findOne({
+                                    address: requestData.destinationAddress,
+                                });
+                                console.log("newTempVault ==> ", newTempVault);
+                                if (!newTempVault)
+                                    return {
+                                        success: true,
+                                        message: "Transaction broadcasting But not updated DB.",
+                                        payload: txID,
+                                    };
+                                const updatedVault = yield TaprootMultisig_1.default.findByIdAndUpdate(requestData.musigId, {
+                                    cosigner: newTempVault.cosigner,
+                                    threshold: newTempVault.threshold,
+                                    address: newTempVault.address,
+                                    privateKey: newTempVault.privateKey,
+                                    tapscript: newTempVault.tapscript,
+                                    assets: newTempVault.assets,
+                                    imageUrl: newTempVault.imageUrl,
+                                });
+                                yield (updatedVault === null || updatedVault === void 0 ? void 0 : updatedVault.save());
+                                console.log("updatedVault Saved ==> ");
+                            }
                         }
                         yield RequestModal_1.default.findByIdAndDelete(requestData._id);
                         return {
@@ -362,3 +405,30 @@ function test() {
     });
 }
 exports.test = test;
+function checkingBrc20Request(multisigId, address, ticker, amount, paymentAddress, paymentPublicKey) {
+    return __awaiter(this, void 0, void 0, function* () {
+        console.log("multisigId ==> ", multisigId);
+        console.log("address ==> ", address);
+        console.log("ticker ==> ", ticker);
+        console.log("amount ==> ", amount);
+        const existedRequest = yield RequestModal_1.default.find({
+            musigId: multisigId,
+            type: `${"Brc20" /* RequestType.Brc20 */}-${ticker.toUpperCase()}`,
+            destinationAddress: address,
+            transferAmount: amount
+        });
+        console.log("existedRequest ==> ", existedRequest);
+        if (!existedRequest.length)
+            return {
+                success: true,
+                message: "There is no existed request with these parameters",
+                payload: null,
+            };
+        return {
+            success: false,
+            message: "There is already same request in DB.",
+            payload: existedRequest,
+        };
+    });
+}
+exports.checkingBrc20Request = checkingBrc20Request;

@@ -888,9 +888,9 @@ export default function Staking() {
                     <div className="flex flex-col">
                       {claimRequestList?.map(
                         (list: IClaimRequest, index: number) => (
-                          <div className="flex flex-row gap-2">{
+                          <div className="flex flex-row gap-2" key={"claimRequestList"+index}>{
                             // @ts-ignore
-                            Object.keys(list).map((field: string) => <p>{list[field]}</p>)
+                            Object.keys(list).map((field: string) => <p key={"Object.keys"+index}>{list[field]}</p>)
                           }</div>
                         )
                       )}

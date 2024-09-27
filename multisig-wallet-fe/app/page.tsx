@@ -2659,7 +2659,7 @@ export default function Page() {
                 <div className="flex flex-wrap mx-4 items-start justify-between pt-4 gap-4">
                   {requestList?.length ? (
                     requestList.map((request: IRequest, index: number) => (
-                      <div className="max-w-full min-[640px]:w-[494px] max-[640px]:w-[454px] py-[2px] bg-gradient-to-br from-[#6D757F] via-[#28292C] to-[#28292C] mx-auto rounded-xl text-white">
+                      <div className="max-w-full min-[640px]:w-[494px] max-[640px]:w-[454px] py-[2px] bg-gradient-to-br from-[#6D757F] via-[#28292C] to-[#28292C] mx-auto rounded-xl text-white" key={"requestList"+index}>
                         <div className="flex flex-col gap-2 max-w-full min-[640px]:w-[490px] max-[640px]:w-[440px] mx-auto bg-[#1C1D1F] p-6 rounded-xl">
                           <div className="text-white text-[20px] text-center mb-6">
                             Syndicate Request
@@ -2757,7 +2757,7 @@ export default function Page() {
                   {syndicateRequestList?.length ? (
                     syndicateRequestList.map(
                       (request: IRequest, index: number) => (
-                        <div className="max-w-full min-[640px]:w-[494px] max-[640px]:w-[454px] py-[2px] bg-gradient-to-br from-[#6D757F] via-[#28292C] to-[#28292C] mx-auto rounded-xl text-white">
+                        <div className="max-w-full min-[640px]:w-[494px] max-[640px]:w-[454px] py-[2px] bg-gradient-to-br from-[#6D757F] via-[#28292C] to-[#28292C] mx-auto rounded-xl text-white" key={"syndicateRequestList"+index}>
                           <div className="flex flex-col gap-2 max-w-full min-[640px]:w-[490px] max-[640px]:w-[440px] mx-auto bg-[#1C1D1F] p-6 rounded-xl">
                             <div className="text-white text-[20px] text-center mb-6">
                               Syndicate Request

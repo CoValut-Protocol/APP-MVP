@@ -35,7 +35,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.WIFWallet = exports.LocalWallet = exports.randomWIF = exports.publicKeyToScriptPk = exports.publicKeyToAddress = exports.publicKeyToPayment = exports.toPsbtNetwork = exports.toXOnly = void 0;
+exports.WIFWallet = exports.LocalWallet = exports.randomWIF = exports.publicKeyToScriptPk = exports.publicKeyToAddress = exports.publicKeyToPayment = exports.toPsbtNetwork = exports.tweakSigner = exports.toXOnly = void 0;
 const bitcoin = __importStar(require("bitcoinjs-lib"));
 const bip371_js_1 = require("bitcoinjs-lib/src/psbt/bip371.js");
 const secp256k1_1 = __importDefault(require("@bitcoinerlab/secp256k1"));
@@ -59,7 +59,7 @@ function tweakSigner(signer, opts) {
     if (signer.publicKey[0] == 3) {
         privateKey = secp256k1_1.default.privateNegate(privateKey);
     }
-    const tweakedPrivateKey = secp256k1_1.default.privateAdd(privateKey, tapTweakHash((0, exports.toXOnly)(signer.publicKey), opts.tweakHash));
+    const tweakedPrivateKey = secp256k1_1.default.privateAdd(privateKey, new Uint8Array(tapTweakHash((0, exports.toXOnly)(signer.publicKey), opts.tweakHash)));
     if (!tweakedPrivateKey) {
         throw new Error("Invalid tweaked private key!");
     }
@@ -67,6 +67,7 @@ function tweakSigner(signer, opts) {
         network: opts.network,
     });
 }
+exports.tweakSigner = tweakSigner;
 function toPsbtNetwork(networkType) {
     if (networkType == 0) {
         return bitcoin.networks.bitcoin;

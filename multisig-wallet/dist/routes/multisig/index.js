@@ -38,7 +38,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const Bitcoin = __importStar(require("bitcoinjs-lib"));
 const config_1 = require("../../config/config");
-const test1_1 = require("../../controller/test1");
 const nativeMusig_controller_1 = require("../../controller/nativeMusig.controller");
 const nativeMusig_controller_2 = require("../../controller/nativeMusig.controller");
 const Multisig_1 = __importDefault(require("../../model/Multisig"));
@@ -46,6 +45,7 @@ const rune_controller_1 = require("../../controller/rune.controller");
 const taproot_controller_1 = require("../../controller/taproot.controller");
 const TaprootMultisig_1 = __importDefault(require("../../model/TaprootMultisig"));
 const type_1 = require("../../type");
+const request_controller_1 = require("../../controller/request.controller");
 // Create a new instance of the Express Router
 const multiSigWalletRoute = (0, express_1.Router)();
 multiSigWalletRoute.post("/create-vault", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -198,7 +198,7 @@ multiSigWalletRoute.get("/fetchVaultList", (req, res) => __awaiter(void 0, void 
             message: "Fetch wallet list successfully",
             payload: {
                 native: nativeList,
-                taproot: taprootList
+                taproot: taprootList,
             },
         });
     }
@@ -214,8 +214,8 @@ multiSigWalletRoute.get("/fetchVaultList", (req, res) => __awaiter(void 0, void 
 multiSigWalletRoute.post("/update-vault", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         console.log("update-vaultapi is called!!");
-        const { vaultId, pubKeyList, minSignCount, assets, ordinalAddress, imageUrl, } = req.body;
-        console.log("recreate api ==> ", vaultId, pubKeyList, minSignCount, assets, ordinalAddress, imageUrl);
+        const { vaultId, pubKeyList, minSignCount, assets, ordinalAddress, imageUrl, vaultType, } = req.body;
+        console.log("recreate api ==> ", vaultId, pubKeyList, minSignCount, assets, ordinalAddress, imageUrl, vaultType);
         let error = "";
         if (!imageUrl)
             error += "There is no imageUrl. ";
@@ -229,33 +229,61 @@ multiSigWalletRoute.post("/update-vault", (req, res) => __awaiter(void 0, void 0
             error += "There is no minSignCount value.";
         if (!ordinalAddress)
             error += "There is no ordinalAddress value.";
+        if (!vaultType)
+            error += "There is no vaultType value.";
         if (error)
             return res.status(400).send({
                 success: false,
                 message: error,
                 payload: null,
             });
-        const oldVault = yield Multisig_1.default.findById(vaultId);
-        if (!oldVault)
+        if (vaultType == type_1.VaultType.NativeSegwit) {
+            const oldVault = yield Multisig_1.default.findById(vaultId);
+            if (!oldVault)
+                return res.status(200).send({
+                    success: false,
+                    message: "There is no exist wallet with this id",
+                    payload: null,
+                });
+            const newWallet = yield (0, nativeMusig_controller_1.reCreateNativeSegwit)(pubKeyList, minSignCount, assets, Bitcoin.networks.testnet, vaultId, imageUrl);
+            console.log("new wallet ==> ", newWallet.message);
+            if (!newWallet.payload)
+                return res.status(200).send({
+                    success: newWallet.success,
+                    message: newWallet.message,
+                    payload: null,
+                });
+            const request = yield (0, nativeMusig_controller_1.transferAllAssets)(oldVault, newWallet.payload, ordinalAddress);
             return res.status(200).send({
-                success: false,
-                message: "There is no exist wallet with this id",
-                payload: null,
+                success: true,
+                message: "Request saved sucessfully",
+                payload: request,
             });
-        const newWallet = yield (0, nativeMusig_controller_1.reCreateNativeSegwit)(pubKeyList, minSignCount, assets, Bitcoin.networks.testnet, vaultId, imageUrl);
-        console.log("new wallet ==> ", newWallet.message);
-        if (!newWallet.payload)
+        }
+        else {
+            const oldVault = yield TaprootMultisig_1.default.findById(vaultId);
+            if (!oldVault)
+                return res.status(200).send({
+                    success: false,
+                    message: "There is no exist wallet with this id",
+                    payload: null,
+                });
+            const newWallet = yield (0, taproot_controller_1.reCreateTaprootMultisig)(pubKeyList, minSignCount, assets, imageUrl, vaultId);
+            console.log("new wallet ==> ", newWallet.message);
+            if (!newWallet.payload)
+                return res.status(200).send({
+                    success: newWallet.success,
+                    message: newWallet.message,
+                    payload: null,
+                });
+            console.log("newWallet ==> ", newWallet);
+            const request = yield (0, taproot_controller_1.transferAllTaprootAssets)(oldVault, newWallet.payload, ordinalAddress);
             return res.status(200).send({
-                success: newWallet.success,
-                message: newWallet.message,
-                payload: null,
+                success: true,
+                message: "Request saved sucessfully",
+                payload: request,
             });
-        const request = yield (0, nativeMusig_controller_1.transferAllAssets)(oldVault, newWallet.payload, ordinalAddress);
-        return res.status(200).send({
-            success: true,
-            message: "Request saved sucessfully",
-            payload: request,
-        });
+        }
         //   Transfer all assets from old to new
     }
     catch (error) {
@@ -267,131 +295,9 @@ multiSigWalletRoute.post("/update-vault", (req, res) => __awaiter(void 0, void 0
         });
     }
 }));
-multiSigWalletRoute.get("/create", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const { pubKeyList, minSignCount } = req.body;
-        let error = "";
-        if (!pubKeyList.length)
-            error += "There is no publicKey value.";
-        if (!minSignCount)
-            error += "There is no minSignCount value.";
-        if (minSignCount > pubKeyList.length)
-            error += "minSignCount should be less than pubkey list count";
-        const address = yield (0, test1_1.createMultiSigWallet)(pubKeyList, minSignCount);
-        return res.status(200).send({
-            message: true,
-            payload: address,
-        });
-    }
-    catch (error) {
-        console.error(error);
-        return res.status(500).send({ error });
-    }
-}));
-// multiSigWalletRoute.post("/sendBtcRequest", async (req, res) => {
-//   const {
-//     id,
-//     transferAmount,
-//     destinationAddress,
-//     ordinalAddress,
-//     pubKey,
-//     multisigWalletAddress,
-//   } = req.body;
-//   let error = "";
-//   if (!multisigWalletAddress) error += "There is no Musig walle address. ";
-//   else if (!validate(multisigWalletAddress))
-//     error += "multisig wallet address is invalid. ";
-//   if (!pubKey) error += "There is no publicKey. ";
-//   if (!destinationAddress) error += "There is no targetAddress. ";
-//   if (!transferAmount) error += "There is no sendAmount value";
-//   if (error)
-//     return res.status(400).send({
-//       success: false,
-//       message: error,
-//       payload: null,
-//     });
-//   const payload = await makeRequest(
-//     id,
-//     transferAmount,
-//     destinationAddress,
-//     ordinalAddress,
-//     pubKey
-//   );
-//   console.log("payload ==> ", payload);
-//   if (payload.success) {
-//     return res.status(200).send({
-//       success: true,
-//       message: "PSBT is created successfully",
-//       psbtHex: payload.psbt.toHex(),
-//       psbtBase64: payload.psbt.toBase64(),
-//     });
-//   } else {
-//     return res.status(200).send({
-//       success: true,
-//       message: error,
-//       psbtHex: null,
-//       psbtBase64: null,
-//     });
-//   }
-// });
-// multiSigWalletRoute.post("/create-taproot", async (req, res) => {
-//   try {
-//     const { pubKeyList, minSignCount, assets } = req.body;
-//     let error = "";
-//     if (!pubKeyList.length) error += "There is no publicKey value.";
-//     if (!minSignCount) error += "There is no minSignCount value.";
-//     if (minSignCount > pubKeyList.length)
-//       error += "minSignCount should be less than pubkey list count";
-//     if (error)
-//       return res.status(400).send({
-//         success: false,
-//         message: error,
-//         payload: null,
-//       });
-//     const payload = await createTaprootMultiSigWallet(
-//       pubKeyList,
-//       minSignCount,
-//       assets,
-//       Bitcoin.networks.testnet
-//     );
-//     if (!payload.success)
-//       return res.status(400).send({
-//         success: payload.success,
-//         message: payload.message,
-//         payload: null,
-//       });
-//     const address = payload.payload?.address;
-//     // const { output, address, witness, internalPublicKey, redeem, message } = payload.payload;
-//     return res.status(200).send({
-//       success: payload.success,
-//       message: payload.message,
-//       payload: address,
-//     });
-//   } catch (error: any) {
-//     console.error(error);
-//     return res.status(500).send({ error });
-//   }
-// });
-// multiSigWalletRoute.post("/createSendPsbt", async (req, res) => {
-//   try {
-//     const { multisigWalletAddress } = req.body;
-//     const payload = await sendBtcRequest(multisigWalletAddress);
-//     if (!payload.success)
-//       return res.status(400).send({
-//         success: payload.success,
-//         message: payload.message,
-//         payload: null,
-//       });
-//     const address = payload.payload?.address;
-//     return res.status(200).send(payload);
-//   } catch (error: any) {
-//     console.error(error);
-//     return res.status(500).send({ error });
-//   }
-// });
 multiSigWalletRoute.post("/sendBtc", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { walletId, destination, amount, paymentAddress, pubKey } = req.body;
+        const { walletId, destination, amount, paymentAddress, pubKey, vaultType } = req.body;
         let error = "";
         if (!walletId)
             error += "There is no walletId value.";
@@ -399,12 +305,24 @@ multiSigWalletRoute.post("/sendBtc", (req, res) => __awaiter(void 0, void 0, voi
             error += "There is no destination value.";
         if (!amount)
             error += "There is no amount value.";
-        const result = yield (0, nativeMusig_controller_1.sendBtcController)(walletId, destination, amount, paymentAddress, pubKey);
-        return res.status(200).send({
-            success: true,
-            message: "The request is made successfully",
-            payload: result,
-        });
+        if (!vaultType)
+            error += "There is no vaultType value.";
+        if (vaultType == type_1.VaultType.NativeSegwit) {
+            const result = yield (0, nativeMusig_controller_1.sendBtcController)(walletId, destination, amount, paymentAddress, pubKey);
+            return res.status(200).send({
+                success: true,
+                message: "The request is made successfully",
+                payload: result,
+            });
+        }
+        else {
+            const result = yield (0, taproot_controller_1.sendBtcTaproot)(walletId, amount, destination, paymentAddress);
+            return res.status(200).send({
+                success: true,
+                message: "send PSBT is made successfully.",
+                payload: result,
+            });
+        }
     }
     catch (error) {
         console.error(error);
@@ -417,27 +335,46 @@ multiSigWalletRoute.post("/sendBtc", (req, res) => __awaiter(void 0, void 0, voi
 }));
 multiSigWalletRoute.post("/sendRune", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { vaultId, destination, runeId, amount, ordinalAddress, ordinalPublicKey, } = req.body;
+        const { vaultId, destination, runeId, amount, ordinalAddress, ordinalPublicKey, vaultType, } = req.body;
         let error = "";
         if (!vaultId)
             error += "There is no walletId value.";
         if (!destination)
             error += "There is no destination value.";
+        if (!runeId)
+            error += "There is no runeId value.";
         if (!amount)
             error += "There is no amount value.";
-        const result = yield (0, nativeMusig_controller_1.sendRuneController)(vaultId, destination, runeId, amount, ordinalAddress, ordinalPublicKey);
-        return res.status(200).send({
-            success: true,
-            message: "The request is made successfully",
-            payload: result,
-        });
+        if (!ordinalAddress)
+            error += "There is no ordinalAddress value.";
+        if (!ordinalPublicKey)
+            error += "There is no ordinalPublicKey value.";
+        if (!vaultType)
+            error += "There is no vaultType value.";
+        if (vaultType == type_1.VaultType.NativeSegwit) {
+            const result = yield (0, nativeMusig_controller_1.sendRuneController)(vaultId, destination, runeId, amount, ordinalAddress, ordinalPublicKey);
+            return res.status(200).send({
+                success: true,
+                message: "The request is made successfully",
+                payload: result,
+            });
+        }
+        else {
+            console.log("<===== Taproot Transfer ====>");
+            const result = yield (0, taproot_controller_1.sendRuneTaproot)(vaultId, runeId, amount, destination, ordinalAddress);
+            return res.status(200).send({
+                success: true,
+                message: "send PSBT is made successfully.",
+                payload: result,
+            });
+        }
     }
     catch (error) {
         console.error(error);
         return res.status(500).send({
             success: false,
-            message: "The request is made with failure.",
-            payload: error,
+            message: error,
+            payload: null,
         });
     }
 }));
@@ -492,20 +429,6 @@ multiSigWalletRoute.post("/getBtcAndRuneByAddress", (req, res) => __awaiter(void
         });
     }
 }));
-// Taproot
-// multiSigWalletRoute.post("/create-vault-taproot", async (req, res) => {
-//   try {
-//     const { pubkeyList, threshold } = req.body;
-//     const result = await createTaprootMultisig(pubkeyList, threshold);
-//     return res.status(200).send({
-//       success: true,
-//       message: "Multisig wallet is made successfully",
-//       payload: result,
-//     });
-//   } catch (error) {
-//     console.log("error ==> ", error);
-//   }
-// });
 multiSigWalletRoute.get("/fetchTaprootVaultList", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         console.log("fetchTaprootVaultList api is called!!");
@@ -531,24 +454,10 @@ multiSigWalletRoute.get("/fetchTaprootVaultList", (req, res) => __awaiter(void 0
         });
     }
 }));
-multiSigWalletRoute.post("/restore", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const { id } = req.body;
-        const result = yield (0, taproot_controller_1.restoreTaprootMultisig)(id);
-        return res.status(200).send({
-            success: true,
-            message: "Multisig wallet is restored successfully",
-            payload: result,
-        });
-    }
-    catch (error) {
-        console.log("error ==> ", error);
-    }
-}));
 multiSigWalletRoute.post("/sendBtcTaproot", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { id, amount, destinationAddress } = req.body;
-        const result = yield (0, taproot_controller_1.sendBtcTaproot)(id, amount, destinationAddress);
+        const { id, amount, destinationAddress, paymentAddress } = req.body;
+        const result = yield (0, taproot_controller_1.sendBtcTaproot)(id, amount, destinationAddress, paymentAddress);
         return res.status(200).send({
             success: true,
             message: "send PSBT is made successfully.",
@@ -557,6 +466,25 @@ multiSigWalletRoute.post("/sendBtcTaproot", (req, res) => __awaiter(void 0, void
     }
     catch (error) {
         console.log("error ==> ", error);
+    }
+}));
+multiSigWalletRoute.post("/sendRuneTaproot", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { id, runeId, amount, destinationAddress, ordinalAddress } = req.body;
+        const result = yield (0, taproot_controller_1.sendRuneTaproot)(id, runeId, amount, destinationAddress, ordinalAddress);
+        return res.status(200).send({
+            success: true,
+            message: "send PSBT is made successfully.",
+            payload: result,
+        });
+    }
+    catch (error) {
+        console.log("error ==> ", error);
+        return res.status(200).send({
+            success: false,
+            message: error,
+            payload: null,
+        });
     }
 }));
 multiSigWalletRoute.post("/combine", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -571,4 +499,310 @@ multiSigWalletRoute.post("/combine", (req, res) => __awaiter(void 0, void 0, voi
         return res.status(500).json({ success: false });
     }
 }));
+multiSigWalletRoute.post("/send-ordinals-ns", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log("exec in send-ordinals-ns ==>  api is calling!!");
+    try {
+        const { vaultId, destination, inscriptionId, paymentAddress } = req.body;
+        let error = "";
+        if (!vaultId)
+            error += "There is no vaultId value.";
+        if (!destination)
+            error += "There is no destination value.";
+        if (!inscriptionId)
+            error += "There is no inscriptionId value.";
+        if (!paymentAddress)
+            error += "There is no paymentAddress value.";
+        if (error != "") {
+            return res.status(200).json({
+                success: false,
+                message: error,
+                payload: null,
+            });
+        }
+        const result = yield (0, nativeMusig_controller_1.sendOrdinalsController)(vaultId, destination, inscriptionId, paymentAddress);
+        return res.status(200).json({
+            success: true,
+            message: "Send ordinals request saved successfully.",
+            payload: result,
+        });
+    }
+    catch (error) {
+        console.log("exec PSBT Error : ", error);
+        return res.status(200).json({
+            success: false,
+            message: error,
+            payload: null,
+        });
+    }
+}));
+multiSigWalletRoute.post("/send-ordinals-taproot", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log("send-ordinals-ns ==>  api is calling!!");
+    try {
+        const { walletId, destination, inscriptionId, amount, paymentAddress } = req.body;
+        let error = "";
+        if (!walletId)
+            error += "There is no walletId value.";
+        if (!destination)
+            error += "There is no destination value.";
+        if (!inscriptionId)
+            error += "There is no inscriptionId value.";
+        if (!amount)
+            error += "There is no amount value.";
+        if (!paymentAddress)
+            error += "There is no paymentAddress value.";
+        if (error != "") {
+            return res.status(200).json({
+                success: false,
+                message: error,
+                payload: null,
+            });
+        }
+        const result = yield (0, taproot_controller_1.sendOrdinalTaproot)(walletId, destination, inscriptionId, amount, paymentAddress);
+        return res.status(200).json({
+            success: true,
+            message: "Send ordinals request saved successfully.",
+            payload: result,
+        });
+    }
+    catch (error) {
+        console.log("exec PSBT Error : ", error);
+        return res.status(500).json({
+            success: true,
+            message: error,
+            payload: null,
+        });
+    }
+}));
+multiSigWalletRoute.post("/send-brc20-ns", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log("send-brc20-ns ==>  api is calling!!");
+    try {
+        const { vaultId, inscriptionId, destination, ticker, amount, paymentAddress, } = req.body;
+        console.log("req.body in send-brc20-ns ==> ", req.body);
+        let error = "";
+        if (!vaultId)
+            error += "There is no vaultId value.";
+        if (!destination)
+            error += "There is no destination value.";
+        if (!inscriptionId)
+            error += "There is no inscriptionId value.";
+        if (!paymentAddress)
+            error += "There is no paymentAddress value.";
+        if (!ticker)
+            error += "There is no vaultId value.";
+        if (!amount)
+            error += "There is no destination value.";
+        if (error != "") {
+            return res.status(200).json({
+                success: false,
+                message: error,
+                payload: null,
+            });
+        }
+        const result = yield (0, nativeMusig_controller_1.sendbrc20Controller)(vaultId, inscriptionId, destination, ticker, amount, paymentAddress);
+        return res.status(200).json({
+            success: true,
+            message: "Send brc20 request saved successfully.",
+            payload: result,
+        });
+    }
+    catch (error) {
+        console.log("exec PSBT Error : ", error);
+        return res.status(200).json({
+            success: false,
+            message: error,
+            payload: null,
+        });
+    }
+}));
+multiSigWalletRoute.post("/send-brc20-taproot", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log("send-brc20-taproot ==>  api is calling!!");
+    try {
+        const { vaultId, inscriptionId, destination, ticker, amount, paymentAddress, } = req.body;
+        let error = "";
+        if (!vaultId)
+            error += "There is no vaultId value.";
+        if (!destination)
+            error += "There is no destination value.";
+        if (!inscriptionId)
+            error += "There is no inscriptionId value.";
+        if (!amount)
+            error += "There is no amount value.";
+        if (!paymentAddress)
+            error += "There is no paymentAddress value.";
+        if (!ticker)
+            error += "There is no amount value.";
+        if (error != "") {
+            return res.status(200).json({
+                success: false,
+                message: error,
+                payload: null,
+            });
+        }
+        const result = yield (0, taproot_controller_1.sendBrc20Taproot)(vaultId, inscriptionId, destination, ticker, amount, paymentAddress);
+        return res.status(200).json({
+            success: true,
+            message: "Send brc20 request saved successfully.",
+            payload: result,
+        });
+    }
+    catch (error) {
+        console.log("exec PSBT Error : ", error);
+        return res.status(500).json({
+            success: true,
+            message: error,
+            payload: null,
+        });
+    }
+}));
+multiSigWalletRoute.post("/checking-brc20-request", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log("checking-brc20-request ==>  api is calling!!");
+    try {
+        const { multisigId, address, ticker, amount, paymentAddress, paymentPublicKey, } = req.body;
+        let error = "";
+        if (!multisigId)
+            error += "There is no multisigId value.";
+        if (!address)
+            error += "There is no address value.";
+        if (!ticker)
+            error += "There is no destination value.";
+        if (!amount)
+            error += "There is no amount value.";
+        if (!paymentAddress)
+            error += "There is no paymentAddress value.";
+        if (!paymentPublicKey)
+            error += "There is no paymentPublicKey value.";
+        if (error != "") {
+            return res.status(200).json({
+                success: false,
+                message: error,
+                payload: null,
+            });
+        }
+        const result = yield (0, request_controller_1.checkingBrc20Request)(multisigId, address, ticker, amount, paymentAddress, paymentPublicKey);
+        return res.status(200).json(result);
+    }
+    catch (error) {
+        console.log("exec PSBT Error : ", error);
+        return res.status(500).json({
+            success: true,
+            message: error,
+            payload: null,
+        });
+    }
+}));
+// Tap protocol
+multiSigWalletRoute.post("/pre-tap-inscribe", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { paymentAddress, paymentPublicKey, itemList } = req.body;
+        let error = "";
+        if (!paymentAddress)
+            error += "There is no paymentAddress value.";
+        if (!paymentPublicKey)
+            error += "There is no paymentPublicKey value.";
+        if (!itemList)
+            error += "There is no itemList value.";
+        if (error != "") {
+            return res.status(200).json({
+                success: false,
+                message: error,
+                payload: null,
+            });
+        }
+        const result = yield (0, nativeMusig_controller_1.inscribeText)(paymentAddress, paymentPublicKey, itemList);
+        return res.status(200).json(result);
+    }
+    catch (error) {
+        return res.status(200).json({
+            success: false,
+            message: error,
+            payload: null,
+        });
+    }
+}));
+multiSigWalletRoute.post("/tap-inscribe", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { receiveAddress, privateKey, amount, hexedPsbt, signedHexedPsbt, itemList, } = req.body;
+        let error = "";
+        if (!receiveAddress)
+            error += "There is no receiveAddress value.";
+        if (!privateKey)
+            error += "There is no privateKey value.";
+        if (!amount)
+            error += "There is no amount value.";
+        if (!hexedPsbt)
+            error += "There is no hexedPsbt value.";
+        if (!signedHexedPsbt)
+            error += "There is no signedHexedPsbt value.";
+        if (!itemList)
+            error += "There is no itemList value.";
+        if (error != "") {
+            return res.status(200).json({
+                success: false,
+                message: error,
+                payload: null,
+            });
+        }
+        const result = yield (0, nativeMusig_controller_1.getInscribe)(receiveAddress, privateKey, amount, hexedPsbt, signedHexedPsbt, itemList);
+        return res.status(200).json(result);
+    }
+    catch (error) {
+        next(error);
+    }
+}));
+multiSigWalletRoute.post("/get-tap-assets", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { address } = req.body;
+    let error = "";
+    if (!address)
+        error += "There is no receiveAddress value.";
+    if (error != "") {
+        return res.status(200).json({
+            success: false,
+            message: error,
+            payload: null,
+        });
+    }
+    const balanceList = yield (0, nativeMusig_controller_1.fetchTapBalanceList)(address);
+    return res.status(200).send({
+        success: true,
+        message: "Fetch Tap balance Successfully",
+        payload: balanceList,
+    });
+}));
+multiSigWalletRoute.post("/send-tap-ordinals-ns", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log("exec in send-tap-ordinals-ns ==>  api is calling!!");
+    try {
+        const { vaultId, inscriptionId, paymentAddress, ordinalAddress } = req.body;
+        let error = "";
+        if (!vaultId)
+            error += "There is no vaultId value.";
+        if (!ordinalAddress)
+            error += "There is no ordinalsAddress value.";
+        if (!inscriptionId)
+            error += "There is no inscriptionId value.";
+        if (!paymentAddress)
+            error += "There is no paymentAddress value.";
+        if (error != "") {
+            return res.status(200).json({
+                success: false,
+                message: error,
+                payload: null,
+            });
+        }
+        const result = yield (0, nativeMusig_controller_1.sendTapOrdinalsController)(vaultId, inscriptionId, paymentAddress, ordinalAddress);
+        return res.status(200).json({
+            success: true,
+            message: "Send Tap inscription request saved successfully.",
+            payload: result,
+        });
+    }
+    catch (error) {
+        console.log("exec PSBT Error : ", error);
+        return res.status(200).json({
+            success: false,
+            message: error,
+            payload: null,
+        });
+    }
+}));
+// End Tap Protocol
 exports.default = multiSigWalletRoute;

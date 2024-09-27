@@ -15,7 +15,7 @@ import { MdOutlineContentCopy } from "react-icons/md";
 
 import { useRouter } from "next/navigation";
 
-export default function page() {
+export default function Page() {
   useEffect(() => {
     setPageIndex(0);
     fetchWallets();

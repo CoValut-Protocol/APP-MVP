@@ -87,10 +87,9 @@ const getRuneUtxoByAddress = (address, runeId) => __awaiter(void 0, void 0, void
     const size = 5000;
     const utxos = [];
     const res = yield axios_1.default.get(url, Object.assign(Object.assign({}, config), { params: { cursor, size } }));
-    console.log("res.data utxo ==> ");
-    console.log(res.data.data.utxo[0].runes);
     if (res.data.code === -1)
         throw "Invalid Address";
+    console.log("res.data.data ==> ", res.data.data);
     utxos.push(...res.data.data.utxo.map((utxo) => {
         tokenSum += Number(utxo.runes[0].amount);
         return {

@@ -14,7 +14,7 @@ import { Button } from "@nextui-org/react";
 import { Psbt } from "bitcoinjs-lib";
 import WalletContext from "@/app/contexts/WalletContext";
 
-export default function page() {
+export default function Page() {
   const {
     paymentAddress,
     paymentPublicKey,
@@ -166,7 +166,7 @@ export default function page() {
               </div>
               <div className="flex flex-col pb-4 border-b">
                 {claimRequestList?.map((list: IClaimRequest, index: number) => (
-                  <div className="flex flex-row gap-2 text-white justify-around mt-2">
+                  <div className="flex flex-row gap-2 text-white justify-around mt-2" key={"claimRequestList"+index}>
                     <p className="w-1/12">{index + 1}</p>
                     <p className="w-1/6 truncate">{list.childId}</p>
                     <p className="w-1/6 truncate">{list.rewardAddress}</p>

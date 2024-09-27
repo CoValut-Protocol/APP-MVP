@@ -46,7 +46,7 @@ import { ORDINAL_URL, TEST_MODE } from "@/app/utils/utils";
 
 import WalletContext from "@/app/contexts/WalletContext";
 
-export default function page() {
+export default function Page() {
   const { slug } = useParams();
   const {
     walletType,

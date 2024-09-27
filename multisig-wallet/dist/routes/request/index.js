@@ -13,7 +13,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const test1_1 = require("../../controller/test1");
 const RequestModal_1 = __importDefault(require("../../model/RequestModal"));
 const request_controller_1 = require("../../controller/request.controller");
 const psbt_service_1 = require("../../service/psbt.service");
@@ -100,27 +99,24 @@ requestRouter.post("/cancelUpdateForRequest", (req, res) => __awaiter(void 0, vo
         payload: null,
     };
 }));
-requestRouter.get("/getRequest", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const { pubKeyList, minSignCount } = req.body;
-        let error = "";
-        if (!pubKeyList.length)
-            error += "There is no publicKey value.";
-        if (!minSignCount)
-            error += "There is no minSignCount value.";
-        if (minSignCount > pubKeyList.length)
-            error += "minSignCount should be less than pubkey list count";
-        const address = yield (0, test1_1.createMultiSigWallet)(pubKeyList, minSignCount);
-        return res.status(200).send({
-            message: true,
-            payload: address,
-        });
-    }
-    catch (error) {
-        console.error(error);
-        return res.status(500).send({ error });
-    }
-}));
+// requestRouter.get("/getRequest", async (req, res) => {
+//   try {
+//     const { pubKeyList, minSignCount } = req.body;
+//     let error = "";
+//     if (!pubKeyList.length) error += "There is no publicKey value.";
+//     if (!minSignCount) error += "There is no minSignCount value.";
+//     if (minSignCount > pubKeyList.length)
+//       error += "minSignCount should be less than pubkey list count";
+//     const address = await createMultiSigWallet(pubKeyList, minSignCount);
+//     return res.status(200).send({
+//       message: true,
+//       payload: address,
+//     });
+//   } catch (error: any) {
+//     console.error(error);
+//     return res.status(500).send({ error });
+//   }
+// });
 requestRouter.post("/exec", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     console.log("request exec api is calling!!");
     try {

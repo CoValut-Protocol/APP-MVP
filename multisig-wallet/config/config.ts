@@ -9,7 +9,7 @@ try {
 }
 
 export const MONGO_URL = `mongodb+srv://toskypi1016:Zjlf8P7TbhS2oy89@cluster0.qyg4xxl.mongodb.net/Multisig`;
-export const PORT = process.env.PORT || 9090;
+export const PORT = process.env.PORT || 9000;
 export const JWT_SECRET = process.env.JWT_SECRET || "JWT_SECRET";
 
 export const TEST_MODE = true;

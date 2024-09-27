@@ -12,9 +12,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.checkingAssets = exports.pushRawTx = exports.getTxHexById = exports.getRuneByIDandAddress = exports.getUTXOByAddress = void 0;
+exports.getInscriptionData = exports.checkingAssets = exports.pushRawTx = exports.getTxHexById = exports.getRuneAmountByIDandAddress = exports.getRuneByIDandAddress = exports.getUTXOByAddress = void 0;
 const axios_1 = __importDefault(require("axios"));
 const config_1 = require("../config/config");
+const utils_service_1 = require("./utils.service");
 // Get BTC UTXO
 const getUTXOByAddress = (address) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -77,6 +78,31 @@ const getRuneByIDandAddress = (address, runeId) => __awaiter(void 0, void 0, voi
     }
 });
 exports.getRuneByIDandAddress = getRuneByIDandAddress;
+const getRuneAmountByIDandAddress = (address, runeId) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const url = `${config_1.OPENAPI_UNISAT_URL}/v1/indexer/address/${address}/runes/${runeId}/balance`;
+        const config = {
+            headers: {
+                Authorization: `Bearer ${config_1.OPENAPI_UNISAT_TOKEN}`,
+            },
+        };
+        let cursor = 0;
+        const size = 5000;
+        console.log("url ==> ", url);
+        const res = yield axios_1.default.get(url, Object.assign(Object.assign({}, config), { params: { cursor, size } }));
+        console.log("res.data ==> ", res.data);
+        if (res.data.code === -1)
+            return 0;
+        if (res.data.data === null)
+            return 0;
+        return res.data.data.amount;
+    }
+    catch (error) {
+        console.log("error in fetching rune by address and id ==> ", error);
+        return 0;
+    }
+});
+exports.getRuneAmountByIDandAddress = getRuneAmountByIDandAddress;
 const getTxHexById = (txId) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { data } = yield axios_1.default.get(`https://mempool.space/${config_1.TEST_MODE ? "testnet/" : ""}api/tx/${txId}/hex`);
@@ -139,3 +165,42 @@ const checkingAssets = (ordinalAddress, tokenName, tokenAmount) => __awaiter(voi
     // }
 });
 exports.checkingAssets = checkingAssets;
+const getInscriptionData = (address, inscriptionId) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const url = `${config_1.OPENAPI_UNISAT_URL}/v1/indexer/address/${address}/inscription-data`;
+        const config = {
+            headers: {
+                Authorization: `Bearer ${config_1.OPENAPI_UNISAT_TOKEN}`,
+            },
+        };
+        const res = yield axios_1.default.get(url, Object.assign({}, config));
+        const filterInscription = res.data.data.inscription.find((inscription) => inscription.inscriptionId === inscriptionId);
+        if (!filterInscription) {
+            console.log("First Attempt get failed, Try second attempt. ==> ", filterInscription);
+            yield (0, utils_service_1.delay)(30000);
+            const res2 = yield axios_1.default.get(url, Object.assign({}, config));
+            const filterInscription2 = res2.data.data.inscription.find((inscription) => inscription.inscriptionId === inscriptionId);
+            if (!filterInscription2) {
+                console.log("Second Attempt get failed, Try third attempt. ==>", filterInscription2);
+                yield (0, utils_service_1.delay)(30000);
+                const res3 = yield axios_1.default.get(url, Object.assign({}, config));
+                const filterInscriptio3 = res3.data.data.inscription.find((inscription) => inscription.inscriptionId === inscriptionId);
+                if (!filterInscriptio3) {
+                    console.log("Third Attempt get failed, Try fourth attempt. ==>", filterInscriptio3);
+                    yield (0, utils_service_1.delay)(40000);
+                    const res4 = yield axios_1.default.get(url, Object.assign({}, config));
+                    const filterInscriptio4 = res4.data.data.inscription.find((inscription) => inscription.inscriptionId === inscriptionId);
+                    return filterInscriptio4.utxo;
+                }
+                return filterInscriptio3.utxo;
+            }
+            return filterInscription2.utxo;
+        }
+        return filterInscription.utxo;
+    }
+    catch (error) {
+        console.log(error.data);
+        throw new Error("Can not fetch Inscriptions!!");
+    }
+});
+exports.getInscriptionData = getInscriptionData;
