@@ -363,7 +363,7 @@ const Header = () => {
           {/* page Index 2 used for update vault */}
           <NavbarItem
             className="cursor-pointer"
-            onClick={() => updatePageIndex(3, "/")}
+            onClick={() => updatePageIndex(3, "/pages/request")}
           >
             {pageIndex == 3 ? (
               <div className="flex flex-row px-4 py-2 text-white items-center justify-between gap-4 bg-[#20292C] rounded-2xl">

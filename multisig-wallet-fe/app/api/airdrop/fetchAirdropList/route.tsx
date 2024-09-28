@@ -5,6 +5,7 @@ export async function POST(request: NextRequest) {
   try {
     const axios = require("axios");
 
+    console.log("Backend URL ==> ", process.env.NEXT_PUBLIC_BACKEND);
     console.log("fetchAirdropList in backend ==> ", `${process.env.NEXT_PUBLIC_BACKEND}/api/airdrop/fetchAirdropList`);
 
     let config = {

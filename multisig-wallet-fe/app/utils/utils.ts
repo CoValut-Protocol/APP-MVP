@@ -28,7 +28,7 @@ export const MEMPOOL_URL = TEST_MODE
 export const OPENAPI_UNISAT_TOKEN =
   "50c50d3a720f82a3b93f164ff76989364bd49565b378b5c6a145c79251ee7672";
 
-export const ORDINAL_URL = TEST_MODE ? "https://testnet-explorer.ordinalsbot.com/content" : "https://explorer.ordinalsbot.com/content";
+export const ORDINAL_URL = TEST_MODE ? "https://static-testnet.unisat.io/content" : "https://static.unisat.io/content";
 
 export interface INewVault {
   address: string,

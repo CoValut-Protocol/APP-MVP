@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     if(vaultType == "NativeSegwit") {
       url = `${process.env.NEXT_PUBLIC_BACKEND}/api/multisig/send-tap-ordinals-ns`;
     } else {
-      url = `${process.env.NEXT_PUBLIC_BACKEND}/api/multisig/send-ordinals-taproot`;
+      url = `${process.env.NEXT_PUBLIC_BACKEND}/api/multisig/send-tap-ordinals-taproot`;
     }
 
     let config = {

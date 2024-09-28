@@ -49,6 +49,7 @@ import WalletContext from "@/app/contexts/WalletContext";
 export default function Page() {
   const { slug } = useParams();
   const {
+    setPageIndex,
     walletType,
     ordinalAddress,
     ordinalPublicKey,
@@ -154,7 +155,8 @@ export default function Page() {
       const prefix = multisigVaultData.address.slice(2, 4);
       const vaultType = prefix == "1p" ? "Taproot" : "NativeSegwit";
 
-      setLoading(true);
+      // setLoading(true);
+      Notiflix.Loading.hourglass("Generating BTC PSBT...")
 
       const result = await btcTransferController(
         multisigVaultData?._id,
@@ -174,6 +176,8 @@ export default function Page() {
         Notiflix.Notify.success(
           "The Request for sending Rune is made successfully."
         );
+        router.push("/pages/request");
+        setPageIndex(3);
       } else Notiflix.Notify.failure("Get failure in building Request.");
     } catch (error) {
       Notiflix.Loading.remove();
@@ -218,7 +222,8 @@ export default function Page() {
       const prefix = multisigVaultData.address.slice(2, 4);
       const vaultType = prefix == "1p" ? "Taproot" : "NativeSegwit";
 
-      setLoading(true);
+      // setLoading(true);
+      Notiflix.Loading.hourglass("Generating Ordinals PSBT...")
 
       const result = await ordinalTransferController(
         multisigVaultData?._id,
@@ -237,6 +242,8 @@ export default function Page() {
         Notiflix.Notify.success(
           "The Request for sending Ordinals is made successfully."
         );
+        router.push("/pages/request");
+        setPageIndex(3)
       } else Notiflix.Notify.failure("Get failure in building Request.");
     } catch (error) {
       Notiflix.Loading.remove();
@@ -285,7 +292,8 @@ export default function Page() {
       const prefix = multisigVaultData.address.slice(2, 4);
       const vaultType = prefix == "1p" ? "Taproot" : "NativeSegwit";
 
-      setLoading(true);
+      // setLoading(true);
+      Notiflix.Loading.hourglass("Generating PSBT for rune transfer...")
 
       const result = await runeTransferController(
         multisigVaultData?._id,
@@ -306,6 +314,8 @@ export default function Page() {
         Notiflix.Notify.success(
           "The Request for sending Rune is made successfully."
         );
+        router.push("/pages/request");
+        setPageIndex(3)
       } else Notiflix.Notify.failure("Get failure in building Request.");
     } catch (error) {
       Notiflix.Loading.remove();
@@ -421,6 +431,8 @@ export default function Page() {
         Notiflix.Notify.success(
           "The Request for sending Ordinals is made successfully."
         );
+        router.push("/pages/request");
+        setPageIndex(3)
       } else Notiflix.Notify.failure(result.message);
     } catch (error) {
       Notiflix.Loading.remove();
@@ -441,50 +453,6 @@ export default function Page() {
         Notiflix.Notify.failure("multisigVaultDatais undefined.");
         return;
       }
-
-      // console.log("onTransferFunc is called!");
-      // console.log("destination ==> ", destination);
-      // console.log("amount ==> ", amount);
-      // console.log("RuneId ==> ", tapList[batchIndex].ticker);
-
-      // if (!destination) {
-      //   setErr({ ...err, destination: "Destination address is required" });
-      //   return;
-      // }
-      // if (
-      //   !validate(destination, TEST_MODE ? Network.testnet : Network.mainnet)
-      // ) {
-      //   setErr({ ...err, destination: "Destination address is invalid." });
-      //   return;
-      // }
-
-      // if (!amount) {
-      //   setErr({ ...err, amount: "Amount is required" });
-      //   return;
-      // }
-
-      // if (amount > parseInt(tapList[batchIndex].overallBalance)) {
-      //   setErr({ ...err, amount: "Amount should be less than balance" });
-      //   return;
-      // }
-
-      // setErr({
-      //   destination: "",
-      //   amount: "",
-      //   ordinals: "",
-      // });
-
-      // const prefix = multisigVaultData.address.slice(2, 4);
-      // const vaultType = prefix == "1p" ? "Taproot" : "NativeSegwit";
-
-      // const itemList: ITapItemList[] = [];
-      // itemList.push({
-      //   tick: tapList[batchIndex].ticker,
-      //   amt: amount.toString(),
-      //   address: destination,
-      // });
-
-      // setLoading(true);
 
       const prefix = multisigVaultData.address.slice(2, 4);
       const vaultType = prefix == "1p" ? "Taproot" : "NativeSegwit";
@@ -537,6 +505,8 @@ export default function Page() {
         Notiflix.Notify.failure(result.message);
         return;
       }
+      router.push("/pages/request");
+      setPageIndex(3)
       Notiflix.Loading.remove();
       Notiflix.Notify.success(result.message);
     } catch (error) {
@@ -696,6 +666,7 @@ export default function Page() {
         Notiflix.Loading.remove();
         Notiflix.Notify.failure("Invalid Multisig ID.");
         router.push("/pages/multisig");
+        setPageIndex(3)
         return;
       }
       setMultisigVaultData(result.payload);
@@ -1203,7 +1174,7 @@ export default function Page() {
                         <></>
                       )}
 
-                      <div className="flex flex-col justify-center gap-4">
+                      <div className="flex flex-wrap justify-center gap-4 max-h-80 overflow-x-hidden overflow-y-auto">
                         {ordinalsList ? (
                           ordinalsList.map(
                             (ordinal: IOrdinalsList, index: number) => (
@@ -1497,7 +1468,7 @@ export default function Page() {
                       onPress={onTapTransferFunc}
                       className="capitalize mt-2"
                     >
-                      Send Brc-20
+                      Send Tap
                     </Button>
                   </div>
                 </ModalBody>

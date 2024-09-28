@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
 
     const response = await axios.request(config);
 
-    return Response.json(response.data.payload);
+    return Response.json(response.data);
   } catch (error) {
     console.error("Error fetching request id", error);
     return Response.json(
