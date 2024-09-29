@@ -86,7 +86,6 @@ SendBtcRoute.post("/exec", async (req, res) => {
       const tempPsbt2 = Bitcoin.Psbt.fromHex(sellerSignPSBT);
       console.log("finalized psbt ==> ", tempPsbt2.extractTransaction(true));
       console.log("virtual size in exec ==> ", tempPsbt2.extractTransaction(true).virtualSize());
-      console.log("feeRate ==> ", (await getFeeRate() + 1));
     }
 
     console.log("sellerSignPSBT ==> ", sellerSignPSBT);

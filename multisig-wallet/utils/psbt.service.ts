@@ -229,7 +229,7 @@ export const generateSendOrdinalPSBT = async (
   for (const utxo of btcUtxos) {
     const fee = calculateTxFee(psbt, feeRate);
 
-    if (amount < price + fee && utxo.value > 10000) {
+    if (amount < price + fee && utxo.value > 1000) {
       amount += utxo.value;
 
       buyerPaymentsignIndexes.push(psbt.inputCount);
@@ -335,7 +335,7 @@ export const generateSendBTCPSBT = async (
   const buyerPaymentsignIndexes: number[] = [];
 
   for (const utxo of btcUtxos) {
-    if (amount < price && utxo.value > 10000) {
+    if (amount < price && utxo.value > 1000) {
       amount += utxo.value;
 
       buyerPaymentsignIndexes.push(psbt.inputCount);

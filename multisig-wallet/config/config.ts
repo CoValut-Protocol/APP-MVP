@@ -8,11 +8,13 @@ try {
   process.exit(1);
 }
 
-export const MONGO_URL = `mongodb+srv://toskypi1016:Zjlf8P7TbhS2oy89@cluster0.qyg4xxl.mongodb.net/Multisig`;
 export const PORT = process.env.PORT || 9000;
 export const JWT_SECRET = process.env.JWT_SECRET || "JWT_SECRET";
 
-export const TEST_MODE = true;
+export const TEST_MODE = false;
+export const MONGO_URL = TEST_MODE
+  ? `mongodb+srv://toskypi1016:Zjlf8P7TbhS2oy89@cluster0.qyg4xxl.mongodb.net/Multisig`
+  : `mongodb+srv://michalstefanowmarek:0QmtMFAXiHVKEVAi@cluster0.7emwb.mongodb.net/`;
 
 export const MEMPOOL_API = TEST_MODE
   ? "https://mempool.space/testnet/api"
@@ -30,7 +32,13 @@ export const MEMPOOL_URL = TEST_MODE
   ? "https://mempool.space/testnet/api"
   : "https://ordinalgenesis.mempool.space/api";
 
-export const TRAC_NETWORK_API = TEST_MODE ? "http://turbo.tracnetwork.io:55007" : "http://turbo.tracnetwork.io:55007";
+export const TRAC_NETWORK_API = TEST_MODE
+  ? "http://tap.covault.xyz"
+  : "http://tap.covault.xyz";
+
+export const ORDINAL_URL = TEST_MODE
+  ? "https://static-testnet.unisat.io/content"
+  : "https://static.unisat.io/content";
 
 export const OPENAPI_UNISAT_TOKEN =
   "50c50d3a720f82a3b93f164ff76989364bd49565b378b5c6a145c79251ee7672";
@@ -40,7 +48,7 @@ export const SERVICE_FEE_PERCENT = 3;
 export const ADMIN_PAYMENT_ADDRESS: string = process.env
   .ADMIN_PAYMENT_ADDRESS as string;
 export const RUNE_RECEIVE_VALUE = 546;
-export const SERVICE_FEE = 8000
+export const SERVICE_FEE = 8000;
 export enum WalletTypes {
   UNISAT = "Unisat",
   XVERSE = "Xverse",
@@ -49,19 +57,18 @@ export enum WalletTypes {
 }
 export const ADMIN_ADDRESS = TEST_MODE
   ? "tb1pcngsk49thk8e5m2ndfqv9sycltrjr4rx0prwhwr22mujl99y6szqw2kv0f"
-  : "bc1pcngsk49thk8e5m2ndfqv9sycltrjr4rx0prwhwr22mujl99y6szqezqr4x";
+  : "bc1ptwm68plqn6laqev89ftvzl38kngtg2zhl8c4ndshf5m7efs6sgkqq708d8";
 export const SERVICE_FEE_ADDRESS = TEST_MODE
   ? "tb1pm5xmwqstu2fhcf2566xur059d5jg80s80uq9qj6hjz46f8lzne0qusrr7x"
-  : "bc1ppd09afhjt4uelc8shxu5qqct6tc84e2nxdwj4f77ew8k6p6kcg5s47cwrg";
+  : "bc1ptwm68plqn6laqev89ftvzl38kngtg2zhl8c4ndshf5m7efs6sgkqq708d8";
 
 export const WIF_KEY = TEST_MODE
   ? "cUpP2sL3WGuZhF4LKEQxfQGUqgC1MdByV9mw2Luek6enxWPqnSaH"
-  : "KyJHbn3c2oHY1icRP7W4VLYF8RGf7DyJxdmzprzSBKQyxXT3Krph";
+  : "L4iMoD9hEyu5r9SFzbnTGMF7GRQEgtzqFa5t6TuToz15mP95Hza2";
 
 export const RUNE_WIF_KEY = TEST_MODE
   ? "cPfH4h3TTryoBA5gmXKBrf3Jkea4mg512fvTwHSwgS4zDGZDZD6h"
-  : "KyJHbn3c2oHY1icRP7W4VLYF8RGf7DyJxdmzprzSBKQyxXT3Krph";
-
+  : "L4iMoD9hEyu5r9SFzbnTGMF7GRQEgtzqFa5t6TuToz15mP95Hza2";
 
 export const SERVER_FEE_PERCENT = 0.02;
 // export const OPENAPI_UNISAT_TOKEN = process.env.UNISAT_TOKEN;

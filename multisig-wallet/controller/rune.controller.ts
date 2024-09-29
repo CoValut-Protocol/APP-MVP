@@ -148,7 +148,7 @@ const etchingRuneToken = async (
       };
     }
 
-    const feeRate = await getFeeRate() + 15;
+    const feeRate = await getFeeRate();
     const generateDummyInscribePSBT = await inscribeRunePSBT(
       dummyUtxo,
       script_p2tr,

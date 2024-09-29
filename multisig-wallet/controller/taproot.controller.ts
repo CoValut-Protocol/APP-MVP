@@ -101,7 +101,11 @@ export const sendBtcTaproot = async (
   const taprootMultisig = await TaprootMultisigModal.findById(id);
   console.log(taprootMultisig);
 
-  if (!taprootMultisig) return;
+  if (!taprootMultisig) return {
+    success: false,
+    message: "There is no taproot Multisig wallet",
+    payload: null
+  };
 
   const pubkeyList = taprootMultisig.cosigner;
   const threshold = taprootMultisig.threshold;
@@ -120,7 +124,7 @@ export const sendBtcTaproot = async (
   ).setNetwork(TEST_MODE ? bitcoin.networks.testnet : bitcoin.networks.bitcoin);
 
   const psbt = new bitcoin.Psbt({ network: bitcoin.networks.testnet });
-  const feeRate = (await getFeeRate()) * 1.3;
+  const feeRate = (await getFeeRate());
 
   let totalBtcAmount = 0;
   const btcUtxos = await getBtcUtxoByAddress(multiSigWallet.address);
@@ -140,7 +144,11 @@ export const sendBtcTaproot = async (
   console.log("totalBtcAmount ==> ", totalBtcAmount);
 
   if (totalBtcAmount < fee + amount * 1 + 5000)
-    return "There is not enough btc in this address.";
+    return {
+      success: false,
+      message: "There is not enough btc in this address.",
+      payload: null
+    };
 
   psbt.addOutput({
     value: amount * 1,
@@ -171,7 +179,11 @@ export const sendBtcTaproot = async (
   await newRequest.save();
 
   console.log("psbt", psbt.toHex());
-  return psbt.toHex();
+  return {
+    success: true,
+    message: "Generating PSBT successfully.",
+    payload: psbt.toHex()
+  };
 };
 
 export const sendRuneTaproot = async (
@@ -184,7 +196,11 @@ export const sendRuneTaproot = async (
   const taprootMultisig = await TaprootMultisigModal.findById(id);
   console.log(taprootMultisig);
 
-  if (!taprootMultisig) return;
+  if (!taprootMultisig) return {
+    success: false,
+    message: "There is no taproot Multisig vault with this id.",
+    payload: null
+  };
 
   const address = taprootMultisig.address;
   const pubkeyList = taprootMultisig.cosigner;
@@ -203,7 +219,7 @@ export const sendRuneTaproot = async (
   ).setNetwork(network);
 
   const psbt = new bitcoin.Psbt({ network });
-  const feeRate = (await getFeeRate()) * 1.7;
+  const feeRate = (await getFeeRate());
 
   const runeBlockNumber = parseInt(runeId.split(":")[0]);
   const runeTxout = parseInt(runeId.split(":")[1]);
@@ -292,18 +308,23 @@ export const sendRuneTaproot = async (
   console.log("btcUtxos ==> ", btcUtxos);
   for (const btcutxo of btcUtxos) {
     const fee = calculateTxFee(psbt, feeRate);
-    if (totalBtcAmount < fee + serverFee + 10000 && btcutxo.value > 10000) {
+    if (totalBtcAmount < fee + serverFee + 10000 && btcutxo.value > 1000) {
       totalBtcAmount += btcutxo.value;
       multiSigWallet.addInput(psbt, btcutxo.txid, btcutxo.vout, btcutxo.value);
     }
   }
 
-  const fee = calculateTxFee(psbt, feeRate);
+  // TODO Consider
+  const fee = Math.round(calculateTxFee(psbt, feeRate) * 2);
 
   console.log("Pay Fee in batch transfer =====================>", fee);
   console.log("totalBtcAmount in batch transfer ====>", totalBtcAmount);
 
-  if (totalBtcAmount < fee + serverFee) throw "BTC balance is not enough";
+  if (totalBtcAmount < fee + serverFee) return {
+    success: false,
+    message: "Balance is not enough.",
+    payload: null
+  };
 
   psbt.addOutput({
     address: multiSigWallet.address,
@@ -326,7 +347,11 @@ export const sendRuneTaproot = async (
 
   await newRequest.save();
 
-  return psbt.toHex();
+  return {
+    success: true,
+    message: "Generate PSBT successfully.",
+    payload: psbt.toHex()
+  };
 };
 
 export const broadcastPSBT = async (
@@ -596,14 +621,17 @@ export async function transferAllTaprootAssets(
 export const sendOrdinalTaproot = async (
   id: string,
   inscriptionId: string,
-  amount: number,
   destinationAddress: string,
-  ordinalAddress: string
+  paymentAddress: string
 ) => {
   const taprootMultisig = await TaprootMultisigModal.findById(id);
   console.log(taprootMultisig);
 
-  if (!taprootMultisig) return;
+  if (!taprootMultisig) return {
+    success: false,
+    message: "There is no taproot Multisig",
+    payload: null,
+  };
 
   const address = taprootMultisig.address;
   const pubkeyList = taprootMultisig.cosigner;
@@ -622,9 +650,12 @@ export const sendOrdinalTaproot = async (
   ).setNetwork(network);
 
   const psbt = new bitcoin.Psbt({ network });
-  const feeRate = (await getFeeRate()) * 1.7;
+  const feeRate = (await getFeeRate());
 
   const btcUtxos = await getBtcUtxoByAddress(address);
+
+  console.log("multiSigWallet.address ==> ", multiSigWallet.address);
+  console.log("inscriptionId ==> ", inscriptionId);
 
   const inscriptionData = await getInscriptionData(
     multiSigWallet.address,
@@ -650,7 +681,7 @@ export const sendOrdinalTaproot = async (
   console.log("btcUtxos ==> ", btcUtxos);
   for (const btcutxo of btcUtxos) {
     const fee = calculateTxFee(psbt, feeRate);
-    if (totalBtcAmount < fee + 10000 && btcutxo.value > 10000) {
+    if (totalBtcAmount < fee + 10000 && btcutxo.value > 1000) {
       totalBtcAmount += btcutxo.value;
       multiSigWallet.addInput(psbt, btcutxo.txid, btcutxo.vout, btcutxo.value);
     }
@@ -661,7 +692,11 @@ export const sendOrdinalTaproot = async (
   console.log("Pay Fee in batch transfer =====================>", fee);
   console.log("totalBtcAmount in batch transfer ====>", totalBtcAmount);
 
-  if (totalBtcAmount < fee) throw "BTC balance is not enough";
+  if (totalBtcAmount < fee) return {
+    success: false,
+    message: "There is not enough btc for tx.",
+    payload: null,
+  }
 
   psbt.addOutput({
     address: multiSigWallet.address,
@@ -671,9 +706,9 @@ export const sendOrdinalTaproot = async (
   const newRequest = new RequestModal({
     musigId: id,
     type: RequestType.OrdinalsTransfer,
-    transferAmount: amount,
+    transferAmount: 1,
     destinationAddress: destinationAddress,
-    creator: ordinalAddress,
+    creator: paymentAddress,
     cosigner: pubkeyList,
     signedCosigner: [],
     psbt: [psbt.toHex()],
@@ -683,8 +718,11 @@ export const sendOrdinalTaproot = async (
   });
 
   await newRequest.save();
-
-  return psbt.toHex();
+  return {
+    success: true,
+    message: "Generate PSBT for ordinals successfully.",
+    payload: psbt.toHex(),
+  }
 };
 
 export const sendBrc20Taproot = async (
@@ -694,11 +732,6 @@ export const sendBrc20Taproot = async (
   ticker: string,
   amount: string,
   paymentAddress: string,
-  // id: string,
-  // inscriptionId: string,
-  // amount: number,
-  // destinationAddress: string,
-  // ordinalAddress: string
 ) => {
   const taprootMultisig = await TaprootMultisigModal.findById(vaultId);
   console.log(taprootMultisig);
@@ -722,7 +755,7 @@ export const sendBrc20Taproot = async (
   ).setNetwork(network);
 
   const psbt = new bitcoin.Psbt({ network });
-  const feeRate = (await getFeeRate()) * 1.7;
+  const feeRate = (await getFeeRate());
 
   const btcUtxos = await getBtcUtxoByAddress(address);
 
@@ -750,7 +783,7 @@ export const sendBrc20Taproot = async (
   console.log("btcUtxos ==> ", btcUtxos);
   for (const btcutxo of btcUtxos) {
     const fee = calculateTxFee(psbt, feeRate);
-    if (totalBtcAmount < fee + 10000 && btcutxo.value > 10000) {
+    if (totalBtcAmount < fee + 10000 && btcutxo.value > 1000) {
       totalBtcAmount += btcutxo.value;
       multiSigWallet.addInput(psbt, btcutxo.txid, btcutxo.vout, btcutxo.value);
     }
@@ -785,4 +818,110 @@ export const sendBrc20Taproot = async (
   await newRequest.save();
 
   return psbt.toHex();
+};
+
+export const sendTapOrdinalTaproot = async (
+  id: string,
+  inscriptionId: string,
+  paymentAddress: string
+) => {
+  const taprootMultisig = await TaprootMultisigModal.findById(id);
+  console.log(taprootMultisig);
+
+  if (!taprootMultisig) return {
+    success: false,
+    message: "There is no taproot Multisig",
+    payload: null,
+  };
+
+  const address = taprootMultisig.address;
+  const pubkeyList = taprootMultisig.cosigner;
+  const threshold = taprootMultisig.threshold;
+  const privateKey = taprootMultisig.privateKey;
+
+  const leafPubkeys = pubkeyList.map((pubkey: string) =>
+    toXOnly(Buffer.from(pubkey, "hex"))
+  );
+
+  const multiSigWallet = new TaprootMultisigWallet(
+    leafPubkeys,
+    threshold,
+    Buffer.from(privateKey, "hex"),
+    LEAF_VERSION_TAPSCRIPT
+  ).setNetwork(network);
+
+  const psbt = new bitcoin.Psbt({ network });
+  const feeRate = (await getFeeRate());
+
+  const btcUtxos = await getBtcUtxoByAddress(address);
+
+  console.log("multiSigWallet.address ==> ", multiSigWallet.address);
+  console.log("inscriptionId ==> ", inscriptionId);
+
+  const inscriptionData = await getInscriptionData(
+    multiSigWallet.address,
+    inscriptionId
+  );
+
+  multiSigWallet.addInput(
+    psbt,
+    inscriptionData.txid,
+    inscriptionData.vout,
+    inscriptionData.satoshi
+  );
+
+  psbt.addOutput({
+    address: taprootMultisig.address,
+    value: inscriptionData.satoshi,
+  });
+
+  console.log("feeRate ==> ", feeRate);
+
+  // add btc utxo input
+  let totalBtcAmount = 0;
+  console.log("btcUtxos ==> ", btcUtxos);
+  for (const btcutxo of btcUtxos) {
+    const fee = calculateTxFee(psbt, feeRate);
+    if (totalBtcAmount < fee + 10000 && btcutxo.value > 1000) {
+      totalBtcAmount += btcutxo.value;
+      multiSigWallet.addInput(psbt, btcutxo.txid, btcutxo.vout, btcutxo.value);
+    }
+  }
+
+  const fee = calculateTxFee(psbt, feeRate);
+
+  console.log("Pay Fee in batch transfer =====================>", fee);
+  console.log("totalBtcAmount in batch transfer ====>", totalBtcAmount);
+
+  if (totalBtcAmount < fee) return {
+    success: false,
+    message: "There is not enough btc for tx.",
+    payload: null,
+  }
+
+  psbt.addOutput({
+    address: multiSigWallet.address,
+    value: totalBtcAmount - fee,
+  });
+
+  const newRequest = new RequestModal({
+    musigId: id,
+    type: RequestType.OrdinalsTransfer,
+    transferAmount: 1,
+    destinationAddress: taprootMultisig.address,
+    creator: paymentAddress,
+    cosigner: pubkeyList,
+    signedCosigner: [],
+    psbt: [psbt.toHex()],
+    threshold,
+    assets: taprootMultisig.assets,
+    pending: "",
+  });
+
+  await newRequest.save();
+  return {
+    success: true,
+    message: "Generate PSBT for ordinals successfully.",
+    payload: psbt.toHex(),
+  }
 };

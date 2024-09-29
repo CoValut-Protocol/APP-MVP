@@ -62,7 +62,7 @@ app.use(
 
 // Define a route to check if the backend server is running
 app.get("/", async (req: any, res: any) => {
-  res.send("Backend Server is Running now!");
+  res.send("Working Version Backend Server is Running now!");
 });
 
 server.listen(PORT, () => {

@@ -30,6 +30,7 @@ import {
   sendBtcTaproot,
   sendOrdinalTaproot,
   sendRuneTaproot,
+  sendTapOrdinalTaproot,
   transferAllTaprootAssets,
 } from "../../controller/taproot.controller";
 import TaprootMultisigModal from "../../model/TaprootMultisig";
@@ -388,11 +389,7 @@ multiSigWalletRoute.post("/sendBtc", async (req, res) => {
         pubKey
       );
 
-      return res.status(200).send({
-        success: true,
-        message: "The request is made successfully",
-        payload: result,
-      });
+      return res.status(200).send(result);
     } else {
       const result = await sendBtcTaproot(
         walletId,
@@ -400,11 +397,7 @@ multiSigWalletRoute.post("/sendBtc", async (req, res) => {
         destination,
         paymentAddress
       );
-      return res.status(200).send({
-        success: true,
-        message: "send PSBT is made successfully.",
-        payload: result,
-      });
+      return res.status(200).send(result);
     }
   } catch (error: any) {
     console.error(error);
@@ -462,11 +455,7 @@ multiSigWalletRoute.post("/sendRune", async (req, res) => {
         destination,
         ordinalAddress
       );
-      return res.status(200).send({
-        success: true,
-        message: "send PSBT is made successfully.",
-        payload: result,
-      });
+      return res.status(200).send(result);
     }
   } catch (error: any) {
     console.error(error);
@@ -680,14 +669,13 @@ multiSigWalletRoute.post("/send-ordinals-ns", async (req, res) => {
 multiSigWalletRoute.post("/send-ordinals-taproot", async (req, res) => {
   console.log("send-ordinals-ns ==>  api is calling!!");
   try {
-    const { walletId, destination, inscriptionId, amount, paymentAddress } =
+    const { vaultId, destination, inscriptionId, paymentAddress } =
       req.body;
     let error = "";
 
-    if (!walletId) error += "There is no walletId value.";
+    if (!vaultId) error += "There is no walletId value.";
     if (!destination) error += "There is no destination value.";
     if (!inscriptionId) error += "There is no inscriptionId value.";
-    if (!amount) error += "There is no amount value.";
     if (!paymentAddress) error += "There is no paymentAddress value.";
 
     if (error != "") {
@@ -699,18 +687,13 @@ multiSigWalletRoute.post("/send-ordinals-taproot", async (req, res) => {
     }
 
     const result = await sendOrdinalTaproot(
-      walletId,
-      destination,
+      vaultId,
       inscriptionId,
-      amount,
+      destination,
       paymentAddress
     );
 
-    return res.status(200).json({
-      success: true,
-      message: "Send ordinals request saved successfully.",
-      payload: result,
-    });
+    return res.status(200).json(result);
   } catch (error) {
     console.log("exec PSBT Error : ", error);
     return res.status(500).json({
@@ -881,6 +864,8 @@ multiSigWalletRoute.post("/pre-tap-inscribe", async (req, res) => {
   try {
     const { paymentAddress, paymentPublicKey, itemList } = req.body;
 
+    console.log("pre-tap-inscribe api is calling.");
+
     let error = "";
     if (!paymentAddress) error += "There is no paymentAddress value.";
     if (!paymentPublicKey) error += "There is no paymentPublicKey value.";
@@ -1005,6 +990,43 @@ multiSigWalletRoute.post("/send-tap-ordinals-ns", async (req, res) => {
     console.log("exec PSBT Error : ", error);
     return res.status(200).json({
       success: false,
+      message: error,
+      payload: null,
+    });
+  }
+});
+
+multiSigWalletRoute.post("/send-tap-ordinals-taproot", async (req, res) => {
+  console.log("send-tap-ordinals-taproot ==>  api is calling!!");
+  try {
+    const { vaultId, inscriptionId, paymentAddress, ordinalAddress } =
+      req.body;
+    let error = "";
+
+    if (!vaultId) error += "There is no walletId value.";
+    if (!ordinalAddress) error += "There is no ordinalAddress value.";
+    if (!inscriptionId) error += "There is no inscriptionId value.";
+    if (!paymentAddress) error += "There is no paymentAddress value.";
+
+    if (error != "") {
+      return res.status(200).json({
+        success: false,
+        message: error,
+        payload: null,
+      });
+    }
+
+    const result = await sendTapOrdinalTaproot(
+      vaultId,
+      inscriptionId,
+      paymentAddress
+    );
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.log("exec PSBT Error : ", error);
+    return res.status(500).json({
+      success: true,
       message: error,
       payload: null,
     });

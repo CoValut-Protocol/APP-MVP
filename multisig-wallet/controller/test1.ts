@@ -103,13 +103,13 @@ export const sendOrdinal = async () => {
     });
 
     let totalBtcAmount = 0;
-    const feeRate = (await getFeeRate()) + 20;
+    const feeRate = (await getFeeRate());
 
     let fee = calculateTxFee(psbt, feeRate);
 
     for (const btcutxo of btcUtxos) {
       fee = calculateTxFee(psbt, feeRate);
-      if (totalBtcAmount < fee && btcutxo.value > 10000) {
+      if (totalBtcAmount < fee && btcutxo.value > 1000) {
         totalBtcAmount += btcutxo.value;
         multiSigWallet.addInput(
           psbt,
@@ -231,13 +231,13 @@ export const sendOrdinalNS = async () => {
     });
 
     let totalBtcAmount = 0;
-    const feeRate = (await getFeeRate()) + 20;
+    const feeRate = (await getFeeRate());
 
     let fee = calculateTxFee(psbt, feeRate);
 
     for (const btcutxo of btcUtxos) {
       fee = calculateTxFee(psbt, feeRate);
-      if (totalBtcAmount < fee && btcutxo.value > 10000) {
+      if (totalBtcAmount < fee && btcutxo.value > 1000) {
         totalBtcAmount += btcutxo.value;
         psbt.addInput({
           hash: btcutxo.txid,

@@ -187,7 +187,7 @@ export const checkingAssets = async (
   //     else return false
 
   // } else if(tokenType == TokenTypes.Rune) {
-  const url = `https://open-api-testnet.unisat.io/v1/indexer/address/${ordinalAddress}/runes/${tokenName}/balance`;
+  const url = TEST_MODE ? `https://open-api-testnet.unisat.io/v1/indexer/address/${ordinalAddress}/runes/${tokenName}/balance` : `https://open-api.unisat.io/v1/indexer/address/${ordinalAddress}/runes/${tokenName}/balance`;
   const payload = await axios.get(url, config);
   const privileage = payload.data.data.amount;
 
