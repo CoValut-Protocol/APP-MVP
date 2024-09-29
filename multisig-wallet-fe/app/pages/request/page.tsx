@@ -14,7 +14,7 @@ import React, { useContext, useEffect, useState } from "react";
 import { MdOutlineContentCopy } from "react-icons/md";
 import { useClipboard } from "use-clipboard-copy";
 
-export default function page() {
+export default function Page() {
   const [requestList, setRequestList] = useState<IRequest[]>();
   const [selectedRequest, setSelectedRequest] = useState<IRequest>();
 
