@@ -12,14 +12,10 @@ import {
   IRequest,
   IWalletList,
   SIGN_MESSAGE,
+  TEST_MODE,
   WalletTypes,
 } from "./utils/utils";
-import {
-  IErr,
-  IRuneAssets,
-  IRuneDetail,
-  ISelectOption,
-} from "./utils/_type";
+import { IErr, IRuneAssets, IRuneDetail, ISelectOption } from "./utils/_type";
 
 import {
   Tabs,
@@ -1162,7 +1158,11 @@ export default function Page() {
                                 </button>
                                 {transactionID ? (
                                   <a
-                                    href={`https://mempool.space/testnet/tx/${transactionID}`}
+                                    href={
+                                      TEST_MODE
+                                        ? `https://mempool.space/testnet/tx/${transactionID}`
+                                        : `https://mempool.space/tx/${transactionID}`
+                                    }
                                   />
                                 ) : (
                                   <></>
@@ -1316,7 +1316,11 @@ export default function Page() {
                                 </button>
                                 {transactionID ? (
                                   <a
-                                    href={`https://mempool.space/testnet/tx/${transactionID}`}
+                                    href={
+                                      TEST_MODE
+                                        ? `https://mempool.space/testnet/tx/${transactionID}`
+                                        : `https://mempool.space/tx/${transactionID}`
+                                    }
                                   />
                                 ) : (
                                   <></>
@@ -1558,7 +1562,11 @@ export default function Page() {
                                 </button>
                                 {transactionID ? (
                                   <a
-                                    href={`https://mempool.space/testnet/tx/${transactionID}`}
+                                    href={
+                                      TEST_MODE
+                                        ? `https://mempool.space/testnet/tx/${transactionID}`
+                                        : `https://mempool.space/tx/${transactionID}`
+                                    }
                                   />
                                 ) : (
                                   <></>
@@ -1735,7 +1743,11 @@ export default function Page() {
                     </button>
                     {transactionID ? (
                       <Link
-                        href={`https://mempool.space/testnet/tx/${transactionID}`}
+                        href={
+                          TEST_MODE
+                            ? `https://mempool.space/testnet/tx/${transactionID}`
+                            : `https://mempool.space/tx/${transactionID}`
+                        }
                       />
                     ) : (
                       <></>

@@ -94,12 +94,14 @@ export default function page() {
           paymentPublicKey
         );
         console.log("after update request result ==> ", result);
-        if (result) {
+        if (result.success) {
           Notiflix.Notify.success(result.message);
           if (result.message == "Transaction broadcasting successfully.") {
             Notiflix.Notify.success(result.payload);
           }
           await fetchRequestList();
+        } else {
+            Notiflix.Notify.failure(result.message);
         }
       } catch (error) {
         console.log("reject sign on unisat ==> ", error);

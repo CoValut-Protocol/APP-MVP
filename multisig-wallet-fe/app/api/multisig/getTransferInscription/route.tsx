@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
         .detail;
       existedInscription = inscriptionList.find(
         (inscription) =>
-          inscription.data.tick == ticker.toUpperCase() &&
+          inscription.data.tick.toUpperCase() == ticker.toUpperCase() &&
           inscription.data.amt == amount
       );
 

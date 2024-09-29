@@ -18,7 +18,7 @@ import WalletContext from "@/app/contexts/WalletContext";
 import { SiVaultwarden } from "react-icons/si";
 import { ImShield } from "react-icons/im";
 import Notiflix from "notiflix";
-import { WalletTypes } from "@/app/utils/utils";
+import { TEST_MODE, WalletTypes } from "@/app/utils/utils";
 import {
   createNewAirdropVault,
   createNewSyndicateVault,
@@ -558,7 +558,7 @@ export default function Page() {
                       </button>
                       {transactionID ? (
                         <a
-                          href={`https://mempool.space/testnet/tx/${transactionID}`}
+                          href={TEST_MODE ? `https://mempool.space/testnet/tx/${transactionID}` : `https://mempool.space/tx/${transactionID}`}
                         />
                       ) : (
                         <></>

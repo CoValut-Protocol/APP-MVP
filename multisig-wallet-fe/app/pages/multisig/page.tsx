@@ -8,7 +8,7 @@ import { useClipboard } from "use-clipboard-copy";
 import WalletContext from "@/app/contexts/WalletContext";
 import { fetchVaultController, updateVault } from "@/app/controller";
 import { IErr } from "@/app/utils/_type";
-import { IWalletList, WalletTypes } from "@/app/utils/utils";
+import { IWalletList, TEST_MODE, WalletTypes } from "@/app/utils/utils";
 import { AiOutlineUpload } from "react-icons/ai";
 import { FaMinus, FaPlus } from "react-icons/fa6";
 import { MdOutlineContentCopy } from "react-icons/md";
@@ -491,7 +491,7 @@ export default function Page() {
             </button>
             {transactionID ? (
               <Link
-                href={`https://mempool.space/testnet/tx/${transactionID}`}
+                href={TEST_MODE ? `https://mempool.space/testnet/tx/${transactionID}` : `https://mempool.space/tx/${transactionID}`}
               />
             ) : (
               <></>

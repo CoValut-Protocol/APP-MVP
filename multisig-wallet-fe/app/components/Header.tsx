@@ -23,7 +23,7 @@ import {
 import Notiflix from "notiflix";
 import WalletConnectIcon from "./Icon/WalletConnectIcon";
 import WalletContext from "../contexts/WalletContext";
-import { WalletTypes, Account, SIGN_MESSAGE } from "../utils/utils";
+import { WalletTypes, Account, SIGN_MESSAGE, TEST_MODE } from "../utils/utils";
 
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -83,6 +83,12 @@ const Header = () => {
       if (typeof currentWindow?.unisat !== "undefined") {
         const unisat: any = currentWindow?.unisat;
         try {
+
+          const network = await unisat.getNetwork();
+          if(network != (TEST_MODE ? "testnet" : "livenet")) {
+            await unisat.switchNetwork(TEST_MODE ? "testnet" : "livenet");
+          }
+
           let accounts: string[] = await unisat.requestAccounts();
           let pubkey = await unisat.getPublicKey();
 
