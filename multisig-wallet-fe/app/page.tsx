@@ -115,6 +115,46 @@ export default function Page() {
     preview: "",
   });
 
+  // Wallet Connection
+  const storeLocalStorage = (
+    ordinalsAddress: string,
+    ordinalsPublickey: string,
+    paymentAddress: string,
+    paymentPublicKey: string
+  ) => {
+    localStorage.setItem("ordinalsAddress", ordinalsAddress);
+    localStorage.setItem("ordinalsPublickey", ordinalsPublickey);
+    localStorage.setItem("paymentAddress", paymentAddress);
+    localStorage.setItem("paymentPublicKey", paymentPublicKey);
+  };
+
+  const removeLocalStorage = () => {
+    localStorage.removeItem("ordinalsAddress");
+    localStorage.removeItem("ordinalsPublickey");
+    localStorage.removeItem("paymentAddress");
+    localStorage.removeItem("paymentPublicKey");
+  };
+
+  const recoverWalletConnection = () => {
+    const ordinalsAddress = localStorage.getItem("ordinalsAddress");
+    const ordinalsPublickey = localStorage.getItem("ordinalsPublickey");
+    const paymentAddress = localStorage.getItem("paymentAddress");
+    const paymentPublicKey = localStorage.getItem("paymentPublicKey");
+
+    if (
+      ordinalsAddress &&
+      ordinalsPublickey &&
+      paymentAddress &&
+      paymentPublicKey
+    ) {
+      setOrdinalAddress(ordinalsAddress);
+      setPaymentAddress(paymentAddress);
+      setOrdinalPublicKey(ordinalsPublickey);
+      setPaymentPublicKey(paymentPublicKey);
+    }
+  };
+  // End Connection
+
   const fileInput = useRef<HTMLInputElement>(null);
   const uploadFile = async (evt: any) => {
     evt.preventDefault();
@@ -607,6 +647,8 @@ export default function Page() {
             setOrdinalPublicKey(pubkey);
             setPaymentPublicKey(pubkey);
 
+            storeLocalStorage(accounts[0], pubkey, accounts[0], pubkey);
+
             onClose();
           } else {
             Notiflix.Notify.failure("No match hash!");
@@ -692,6 +734,13 @@ export default function Page() {
             setOrdinalAddress(ordinalsAddressItem?.address as string);
             setOrdinalPublicKey(ordinalsAddressItem?.publicKey as string);
 
+            storeLocalStorage(
+              ordinalsAddressItem?.address as string,
+              ordinalsAddressItem?.publicKey as string,
+              paymentAddressItem?.address as string,
+              paymentAddressItem?.publicKey as string
+            );
+
             onClose();
           } else {
             Notiflix.Notify.failure("No match hash!");
@@ -703,7 +752,7 @@ export default function Page() {
       console.log("xverseConnectWallet error ==> ", error);
     }
   };
-  // End
+  // End Wallet Connection
 
   // CopyHandler
   const clipboard = useClipboard();

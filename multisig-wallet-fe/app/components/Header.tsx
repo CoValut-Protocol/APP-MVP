@@ -65,6 +65,10 @@ const Header = () => {
   const [loading, setLoading] = useState(false);
   // End
 
+  Notiflix.Notify.init({
+    position: "right-bottom"
+  })
+
   const {
     pageIndex,
     ordinalAddress,
@@ -83,9 +87,8 @@ const Header = () => {
       if (typeof currentWindow?.unisat !== "undefined") {
         const unisat: any = currentWindow?.unisat;
         try {
-
           const network = await unisat.getNetwork();
-          if(network != (TEST_MODE ? "testnet" : "livenet")) {
+          if (network != (TEST_MODE ? "testnet" : "livenet")) {
             await unisat.switchNetwork(TEST_MODE ? "testnet" : "livenet");
           }
 
@@ -117,6 +120,8 @@ const Header = () => {
             setPaymentAddress(accounts[0] || "");
             setOrdinalPublicKey(pubkey);
             setPaymentPublicKey(pubkey);
+
+            storeLocalStorage(accounts[0], pubkey, accounts[0], pubkey);
 
             onClose();
           } else {
@@ -193,6 +198,13 @@ const Header = () => {
             setOrdinalAddress(ordinalsAddressItem?.address as string);
             setOrdinalPublicKey(ordinalsAddressItem?.publicKey as string);
 
+            storeLocalStorage(
+              ordinalsAddressItem?.address as string,
+              ordinalsAddressItem?.publicKey as string,
+              paymentAddressItem?.address as string,
+              paymentAddressItem?.publicKey as string
+            );
+
             onClose();
           } else {
             Notiflix.Notify.failure("No match hash!");
@@ -220,11 +232,67 @@ const Header = () => {
     }
   };
 
+  const storeLocalStorage = (
+    ordinalsAddress: string,
+    ordinalsPublickey: string,
+    paymentAddress: string,
+    paymentPublicKey: string
+  ) => {
+    localStorage.setItem("ordinalsAddress", ordinalsAddress);
+    localStorage.setItem("ordinalsPublickey", ordinalsPublickey);
+    localStorage.setItem("paymentAddress", paymentAddress);
+    localStorage.setItem("paymentPublicKey", paymentPublicKey);
+  };
+
+  const removeLocalStorage = () => {
+    localStorage.removeItem("ordinalsAddress");
+    localStorage.removeItem("ordinalsPublickey");
+    localStorage.removeItem("paymentAddress");
+    localStorage.removeItem("paymentPublicKey");
+
+    setOrdinalAddress("");
+    setPaymentAddress("");
+    setOrdinalPublicKey("");
+    setPaymentPublicKey("");
+  };
+
+  const recoverWalletConnection = () => {
+    const ordinalsAddress = localStorage.getItem("ordinalsAddress");
+    const ordinalsPublickey = localStorage.getItem("ordinalsPublickey");
+    const paymentAddress = localStorage.getItem("paymentAddress");
+    const paymentPublicKey = localStorage.getItem("paymentPublicKey");
+
+    if (
+      ordinalsAddress &&
+      ordinalsPublickey &&
+      paymentAddress &&
+      paymentPublicKey
+    ) {
+      setOrdinalAddress(ordinalsAddress);
+      setPaymentAddress(paymentAddress);
+      setOrdinalPublicKey(ordinalsPublickey);
+      setPaymentPublicKey(paymentPublicKey);
+    }
+  };
+
+  const openWalletModal = () => {
+    if(paymentAddress){
+      removeLocalStorage();
+      Notiflix.Notify.success("Wallet disconnected!");
+      return;
+    }
+    onOpen();
+  }
+
   const updatePageIndex = (index: number, route: string) => {
     console.log("pageIndex ==> ", index);
     router.push(route);
     setPageIndex(index);
   };
+
+  useEffect(() => {
+    recoverWalletConnection();
+  }, []);
 
   useEffect(() => {
     if (wallet && triggerFetch) {
@@ -389,7 +457,7 @@ const Header = () => {
             <Button
               color="warning"
               variant="flat"
-              onPress={() => onOpen()}
+              onPress={() => openWalletModal()}
               className="capitalize"
             >
               <WalletConnectIcon />
