@@ -65,10 +65,6 @@ const Header = () => {
   const [loading, setLoading] = useState(false);
   // End
 
-  Notiflix.Notify.init({
-    position: "right-bottom"
-  })
-
   const {
     pageIndex,
     ordinalAddress,
@@ -276,13 +272,13 @@ const Header = () => {
   };
 
   const openWalletModal = () => {
-    if(paymentAddress){
+    if (paymentAddress) {
       removeLocalStorage();
       Notiflix.Notify.success("Wallet disconnected!");
       return;
     }
     onOpen();
-  }
+  };
 
   const updatePageIndex = (index: number, route: string) => {
     console.log("pageIndex ==> ", index);
@@ -291,6 +287,9 @@ const Header = () => {
   };
 
   useEffect(() => {
+    Notiflix.Notify.init({
+      position: "right-bottom",
+    });
     recoverWalletConnection();
   }, []);
 
