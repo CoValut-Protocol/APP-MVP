@@ -19,6 +19,7 @@ import {
   getAddress,
   signMessage,
 } from "sats-connect";
+import { ConnectButton, useZky } from "@kondor-finance/zky-toolkit";
 
 import Notiflix from "notiflix";
 import WalletConnectIcon from "./Icon/WalletConnectIcon";
@@ -77,208 +78,210 @@ const Header = () => {
     setOrdinalPublicKey,
   } = useContext(WalletContext);
 
-  const unisatConnectWallet = async () => {
-    try {
-      const currentWindow: any = window;
-      if (typeof currentWindow?.unisat !== "undefined") {
-        const unisat: any = currentWindow?.unisat;
-        try {
-          const network = await unisat.getNetwork();
-          if (network != (TEST_MODE ? "testnet" : "livenet")) {
-            await unisat.switchNetwork(TEST_MODE ? "testnet" : "livenet");
-          }
+  const { addresses, publicKeys, connection, balance } = useZky();
 
-          let accounts: string[] = await unisat.requestAccounts();
-          let pubkey = await unisat.getPublicKey();
+  // const unisatConnectWallet = async () => {
+  //   try {
+  //     const currentWindow: any = window;
+  //     if (typeof currentWindow?.unisat !== "undefined") {
+  //       const unisat: any = currentWindow?.unisat;
+  //       try {
+  //         const network = await unisat.getNetwork();
+  //         if (network != (TEST_MODE ? "testnet" : "livenet")) {
+  //           await unisat.switchNetwork(TEST_MODE ? "testnet" : "livenet");
+  //         }
 
-          let res = await unisat.signMessage(SIGN_MESSAGE);
-          setHash(res);
+  //         let accounts: string[] = await unisat.requestAccounts();
+  //         let pubkey = await unisat.getPublicKey();
 
-          const tempWalletType = WalletTypes.UNISAT;
-          const tempOrdinalAddress = accounts[0];
-          const tempPaymentAddress = accounts[0];
-          const tempOrdinalPublicKey = pubkey;
-          const tempPaymentPublicKey = pubkey;
+  //         let res = await unisat.signMessage(SIGN_MESSAGE);
+  //         setHash(res);
 
-          const savedHash = await walletConnect(
-            tempPaymentAddress,
-            tempPaymentPublicKey,
-            tempOrdinalAddress,
-            tempOrdinalPublicKey,
-            tempWalletType,
-            res
-          );
+  //         const tempWalletType = WalletTypes.UNISAT;
+  //         const tempOrdinalAddress = accounts[0];
+  //         const tempPaymentAddress = accounts[0];
+  //         const tempOrdinalPublicKey = pubkey;
+  //         const tempPaymentPublicKey = pubkey;
 
-          if (savedHash.success) {
-            Notiflix.Notify.success("Connect succes!");
-            setWalletType(WalletTypes.UNISAT);
-            setOrdinalAddress(accounts[0] || "");
-            setPaymentAddress(accounts[0] || "");
-            setOrdinalPublicKey(pubkey);
-            setPaymentPublicKey(pubkey);
+  //         const savedHash = await walletConnect(
+  //           tempPaymentAddress,
+  //           tempPaymentPublicKey,
+  //           tempOrdinalAddress,
+  //           tempOrdinalPublicKey,
+  //           tempWalletType,
+  //           res
+  //         );
 
-            storeLocalStorage(accounts[0], pubkey, accounts[0], pubkey);
+  //         if (savedHash.success) {
+  //           Notiflix.Notify.success("Connect succes!");
+  //           setWalletType(WalletTypes.UNISAT);
+  //           setOrdinalAddress(accounts[0] || "");
+  //           setPaymentAddress(accounts[0] || "");
+  //           setOrdinalPublicKey(pubkey);
+  //           setPaymentPublicKey(pubkey);
 
-            onClose();
-          } else {
-            Notiflix.Notify.failure("No match hash!");
-          }
-        } catch (e) {
-          Notiflix.Notify.failure("Connect failed!");
-        }
-      }
-    } catch (error) {
-      console.log("unisatConnectWallet error ==> ", error);
-    }
-  };
+  //           storeLocalStorage(accounts[0], pubkey, accounts[0], pubkey);
 
-  const xverseConnectWallet = async () => {
-    try {
-      await getAddress({
-        payload: {
-          purposes: [
-            AddressPurpose.Ordinals,
-            AddressPurpose.Payment,
-            AddressPurpose.Stacks,
-          ],
-          message: "Welcome Co-vault",
-          network: {
-            type: BitcoinNetworkType.Testnet,
-          },
-        },
-        onFinish: async (response) => {
-          const paymentAddressItem = response.addresses.find(
-            (address) => address.purpose === AddressPurpose.Payment
-          );
-          const ordinalsAddressItem = response.addresses.find(
-            (address) => address.purpose === AddressPurpose.Ordinals
-          );
+  //           onClose();
+  //         } else {
+  //           Notiflix.Notify.failure("No match hash!");
+  //         }
+  //       } catch (e) {
+  //         Notiflix.Notify.failure("Connect failed!");
+  //       }
+  //     }
+  //   } catch (error) {
+  //     console.log("unisatConnectWallet error ==> ", error);
+  //   }
+  // };
 
-          let tempWalletType = WalletTypes.XVERSE;
-          let tempOrdinalAddress = ordinalsAddressItem?.address as string;
-          let tempPaymentAddress = paymentAddressItem?.address as string;
-          let tempOrdinalPublicKey = ordinalsAddressItem?.publicKey as string;
-          let tempPaymentPublicKey = paymentAddressItem?.publicKey as string;
+  // const xverseConnectWallet = async () => {
+  //   try {
+  //     await getAddress({
+  //       payload: {
+  //         purposes: [
+  //           AddressPurpose.Ordinals,
+  //           AddressPurpose.Payment,
+  //           AddressPurpose.Stacks,
+  //         ],
+  //         message: "Welcome Co-vault",
+  //         network: {
+  //           type: BitcoinNetworkType.Testnet,
+  //         },
+  //       },
+  //       onFinish: async (response) => {
+  //         const paymentAddressItem = response.addresses.find(
+  //           (address) => address.purpose === AddressPurpose.Payment
+  //         );
+  //         const ordinalsAddressItem = response.addresses.find(
+  //           (address) => address.purpose === AddressPurpose.Ordinals
+  //         );
 
-          let res = "";
-          await signMessage({
-            payload: {
-              network: {
-                type: BitcoinNetworkType.Testnet,
-              },
-              address: paymentAddressItem?.address as string,
-              message: "Sign in Co-vault",
-            },
-            onFinish: (response: any) => {
-              // signature
-              res = response;
-              return response;
-            },
-            onCancel: () => alert("Canceled"),
-          });
+  //         let tempWalletType = WalletTypes.XVERSE;
+  //         let tempOrdinalAddress = ordinalsAddressItem?.address as string;
+  //         let tempPaymentAddress = paymentAddressItem?.address as string;
+  //         let tempOrdinalPublicKey = ordinalsAddressItem?.publicKey as string;
+  //         let tempPaymentPublicKey = paymentAddressItem?.publicKey as string;
 
-          const savedHash = await walletConnect(
-            tempPaymentAddress,
-            tempPaymentPublicKey,
-            tempOrdinalAddress,
-            tempOrdinalPublicKey,
-            tempWalletType,
-            res
-          );
+  //         let res = "";
+  //         await signMessage({
+  //           payload: {
+  //             network: {
+  //               type: BitcoinNetworkType.Testnet,
+  //             },
+  //             address: paymentAddressItem?.address as string,
+  //             message: "Sign in Co-vault",
+  //           },
+  //           onFinish: (response: any) => {
+  //             // signature
+  //             res = response;
+  //             return response;
+  //           },
+  //           onCancel: () => alert("Canceled"),
+  //         });
 
-          if (savedHash.success) {
-            Notiflix.Notify.success("Connect succes!");
-            setWalletType(WalletTypes.XVERSE);
-            setPaymentAddress(paymentAddressItem?.address as string);
-            setPaymentPublicKey(paymentAddressItem?.publicKey as string);
-            setOrdinalAddress(ordinalsAddressItem?.address as string);
-            setOrdinalPublicKey(ordinalsAddressItem?.publicKey as string);
+  //         const savedHash = await walletConnect(
+  //           tempPaymentAddress,
+  //           tempPaymentPublicKey,
+  //           tempOrdinalAddress,
+  //           tempOrdinalPublicKey,
+  //           tempWalletType,
+  //           res
+  //         );
 
-            storeLocalStorage(
-              ordinalsAddressItem?.address as string,
-              ordinalsAddressItem?.publicKey as string,
-              paymentAddressItem?.address as string,
-              paymentAddressItem?.publicKey as string
-            );
+  //         if (savedHash.success) {
+  //           Notiflix.Notify.success("Connect succes!");
+  //           setWalletType(WalletTypes.XVERSE);
+  //           setPaymentAddress(paymentAddressItem?.address as string);
+  //           setPaymentPublicKey(paymentAddressItem?.publicKey as string);
+  //           setOrdinalAddress(ordinalsAddressItem?.address as string);
+  //           setOrdinalPublicKey(ordinalsAddressItem?.publicKey as string);
 
-            onClose();
-          } else {
-            Notiflix.Notify.failure("No match hash!");
-          }
-        },
-        onCancel: () => alert("Request canceled"),
-      });
-    } catch (error) {
-      console.log("xverseConnectWallet error ==> ", error);
-    }
-  };
+  //           storeLocalStorage(
+  //             ordinalsAddressItem?.address as string,
+  //             ordinalsAddressItem?.publicKey as string,
+  //             paymentAddressItem?.address as string,
+  //             paymentAddressItem?.publicKey as string
+  //           );
 
-  const meconnect = () => {
-    try {
-      const compatibleWallet = wallets.find(isSatsConnectCompatibleWallet);
-      if (compatibleWallet) {
-        setWallet(compatibleWallet);
-        setTriggerFetch((prev) => prev + 1);
-      } else {
-        console.error("No compatible wallet found.");
-        toast.error("No compatible wallet found.");
-      }
-    } catch (error) {
-      console.log("meconnect error ==> ", error);
-    }
-  };
+  //           onClose();
+  //         } else {
+  //           Notiflix.Notify.failure("No match hash!");
+  //         }
+  //       },
+  //       onCancel: () => alert("Request canceled"),
+  //     });
+  //   } catch (error) {
+  //     console.log("xverseConnectWallet error ==> ", error);
+  //   }
+  // };
 
-  const storeLocalStorage = (
-    ordinalsAddress: string,
-    ordinalsPublickey: string,
-    paymentAddress: string,
-    paymentPublicKey: string
-  ) => {
-    localStorage.setItem("ordinalsAddress", ordinalsAddress);
-    localStorage.setItem("ordinalsPublickey", ordinalsPublickey);
-    localStorage.setItem("paymentAddress", paymentAddress);
-    localStorage.setItem("paymentPublicKey", paymentPublicKey);
-  };
+  // const meconnect = () => {
+  //   try {
+  //     const compatibleWallet = wallets.find(isSatsConnectCompatibleWallet);
+  //     if (compatibleWallet) {
+  //       setWallet(compatibleWallet);
+  //       setTriggerFetch((prev) => prev + 1);
+  //     } else {
+  //       console.error("No compatible wallet found.");
+  //       toast.error("No compatible wallet found.");
+  //     }
+  //   } catch (error) {
+  //     console.log("meconnect error ==> ", error);
+  //   }
+  // };
 
-  const removeLocalStorage = () => {
-    localStorage.removeItem("ordinalsAddress");
-    localStorage.removeItem("ordinalsPublickey");
-    localStorage.removeItem("paymentAddress");
-    localStorage.removeItem("paymentPublicKey");
+  // const storeLocalStorage = (
+  //   ordinalsAddress: string,
+  //   ordinalsPublickey: string,
+  //   paymentAddress: string,
+  //   paymentPublicKey: string
+  // ) => {
+  //   localStorage.setItem("ordinalsAddress", ordinalsAddress);
+  //   localStorage.setItem("ordinalsPublickey", ordinalsPublickey);
+  //   localStorage.setItem("paymentAddress", paymentAddress);
+  //   localStorage.setItem("paymentPublicKey", paymentPublicKey);
+  // };
 
-    setOrdinalAddress("");
-    setPaymentAddress("");
-    setOrdinalPublicKey("");
-    setPaymentPublicKey("");
-  };
+  // const removeLocalStorage = () => {
+  //   localStorage.removeItem("ordinalsAddress");
+  //   localStorage.removeItem("ordinalsPublickey");
+  //   localStorage.removeItem("paymentAddress");
+  //   localStorage.removeItem("paymentPublicKey");
 
-  const recoverWalletConnection = () => {
-    const ordinalsAddress = localStorage.getItem("ordinalsAddress");
-    const ordinalsPublickey = localStorage.getItem("ordinalsPublickey");
-    const paymentAddress = localStorage.getItem("paymentAddress");
-    const paymentPublicKey = localStorage.getItem("paymentPublicKey");
+  //   setOrdinalAddress("");
+  //   setPaymentAddress("");
+  //   setOrdinalPublicKey("");
+  //   setPaymentPublicKey("");
+  // };
 
-    if (
-      ordinalsAddress &&
-      ordinalsPublickey &&
-      paymentAddress &&
-      paymentPublicKey
-    ) {
-      setOrdinalAddress(ordinalsAddress);
-      setPaymentAddress(paymentAddress);
-      setOrdinalPublicKey(ordinalsPublickey);
-      setPaymentPublicKey(paymentPublicKey);
-    }
-  };
+  // const recoverWalletConnection = () => {
+  //   const ordinalsAddress = localStorage.getItem("ordinalsAddress");
+  //   const ordinalsPublickey = localStorage.getItem("ordinalsPublickey");
+  //   const paymentAddress = localStorage.getItem("paymentAddress");
+  //   const paymentPublicKey = localStorage.getItem("paymentPublicKey");
 
-  const openWalletModal = () => {
-    if (paymentAddress) {
-      removeLocalStorage();
-      Notiflix.Notify.success("Wallet disconnected!");
-      return;
-    }
-    onOpen();
-  };
+  //   if (
+  //     ordinalsAddress &&
+  //     ordinalsPublickey &&
+  //     paymentAddress &&
+  //     paymentPublicKey
+  //   ) {
+  //     setOrdinalAddress(ordinalsAddress);
+  //     setPaymentAddress(paymentAddress);
+  //     setOrdinalPublicKey(ordinalsPublickey);
+  //     setPaymentPublicKey(paymentPublicKey);
+  //   }
+  // };
+
+  // const openWalletModal = () => {
+  //   if (paymentAddress) {
+  //     removeLocalStorage();
+  //     Notiflix.Notify.success("Wallet disconnected!");
+  //     return;
+  //   }
+  //   onOpen();
+  // };
 
   const updatePageIndex = (index: number, route: string) => {
     console.log("pageIndex ==> ", index);
@@ -286,12 +289,12 @@ const Header = () => {
     setPageIndex(index);
   };
 
-  useEffect(() => {
-    Notiflix.Notify.init({
-      position: "right-bottom",
-    });
-    recoverWalletConnection();
-  }, []);
+  // useEffect(() => {
+  //   Notiflix.Notify.init({
+  //     position: "right-bottom",
+  //   });
+  //   recoverWalletConnection();
+  // }, []);
 
   useEffect(() => {
     if (wallet && triggerFetch) {
@@ -383,6 +386,19 @@ const Header = () => {
     }
   }, [ordinalAddress]);
 
+  useEffect(() => {
+    console.log("connection.isConnecte ==> ", connection.isConnected);
+    console.log("addresses.btcAddress ==> ", addresses.btcAddress);
+    setWalletType(WalletTypes.XVERSE);
+    setPaymentAddress(addresses.btcAddress as string);
+    setOrdinalAddress(addresses.ordinalsAddress as string);
+    setPaymentPublicKey(publicKeys.btcPublicKey as string);
+    setOrdinalPublicKey(publicKeys.ordinalsPublicKey as string);
+
+    if (connection.isConnected) router.push("/pages/multisig");
+    else router.push("/");
+  }, [connection.isConnected]);
+
   return (
     <div className="flex gap-3 bg-[#1C1D1F]">
       <Navbar
@@ -453,7 +469,7 @@ const Header = () => {
         </NavbarContent>
         <NavbarContent justify="end" className="gap-10">
           <NavbarItem>
-            <Button
+            {/* <Button
               color="warning"
               variant="flat"
               onPress={() => openWalletModal()}
@@ -465,11 +481,12 @@ const Header = () => {
               ) : (
                 "Connect Wallet"
               )}
-            </Button>
+            </Button> */}
+            <ConnectButton />
           </NavbarItem>
         </NavbarContent>
       </Navbar>
-      <Modal
+      {/* <Modal
         backdrop="blur"
         isOpen={isOpen}
         onClose={onClose}
@@ -541,7 +558,7 @@ const Header = () => {
             </>
           )}
         </ModalContent>
-      </Modal>
+      </Modal> */}
       {loading ? <Loading /> : <></>}
     </div>
   );

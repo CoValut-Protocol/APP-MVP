@@ -1697,7 +1697,8 @@ export const getTapBalanceByAddressController = async (address: string) => {
 export const preTapInscribeController = async (
   paymentAddress: string,
   paymentPublicKey: string,
-  itemList: ITapItemList[]
+  itemList: ITapItemList[],
+  walletType: string
 ) => {
   try {
     const response = await fetch(`/api/multisig/preTapInscribe`, {
@@ -1707,6 +1708,7 @@ export const preTapInscribeController = async (
         paymentAddress,
         paymentPublicKey,
         itemList,
+        walletType
       }),
     });
     if (response.status == 200) {

@@ -11,7 +11,7 @@ try {
 export const PORT = process.env.PORT || 9000;
 export const JWT_SECRET = process.env.JWT_SECRET || "JWT_SECRET";
 
-export const TEST_MODE = false;
+export const TEST_MODE = true;
 export const MONGO_URL = TEST_MODE
   ? `mongodb+srv://toskypi1016:Zjlf8P7TbhS2oy89@cluster0.qyg4xxl.mongodb.net/Multisig`
   : `mongodb+srv://michalstefanowmarek:0QmtMFAXiHVKEVAi@cluster0.7emwb.mongodb.net/`;
@@ -33,7 +33,7 @@ export const MEMPOOL_URL = TEST_MODE
   : "https://ordinalgenesis.mempool.space/api";
 
 export const TRAC_NETWORK_API = TEST_MODE
-  ? "http://tap.covault.xyz"
+  ? "http://testtap.covault.xyz"
   : "http://tap.covault.xyz";
 
 export const ORDINAL_URL = TEST_MODE

@@ -862,7 +862,7 @@ multiSigWalletRoute.post("/checking-brc20-request", async (req, res) => {
 
 multiSigWalletRoute.post("/pre-tap-inscribe", async (req, res) => {
   try {
-    const { paymentAddress, paymentPublicKey, itemList } = req.body;
+    const { paymentAddress, paymentPublicKey, itemList, walletType } = req.body;
 
     console.log("pre-tap-inscribe api is calling.");
 
@@ -870,6 +870,8 @@ multiSigWalletRoute.post("/pre-tap-inscribe", async (req, res) => {
     if (!paymentAddress) error += "There is no paymentAddress value.";
     if (!paymentPublicKey) error += "There is no paymentPublicKey value.";
     if (!itemList) error += "There is no itemList value.";
+    if (!walletType) error += "There is no walletType value.";
+
 
     if (error != "") {
       return res.status(200).json({
@@ -882,7 +884,8 @@ multiSigWalletRoute.post("/pre-tap-inscribe", async (req, res) => {
     const result = await inscribeText(
       paymentAddress,
       paymentPublicKey,
-      itemList
+      itemList,
+      walletType
     );
     return res.status(200).json(result);
   } catch (error) {
