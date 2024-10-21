@@ -214,7 +214,7 @@ export default function Page() {
   return paymentPublicKey ? (
     <div className="flex flex-col gap-10 mt-20 min-h-[100vh-30px]">
       <p className="w-full text-center text-4xl text-yellow-300">
-        Batch Sending Vault Request
+        Multisig Vault Request
       </p>
       <div className="flex flex-wrap mx-4 items-start justify-between pt-4 gap-4">
         {requestList?.length ? (
@@ -303,7 +303,7 @@ export default function Page() {
           ))
         ) : (
           <div className="w-full text-center mt-40 text-white text-xl pb-20 mb-4">
-            There is no Batch Sending Vault Request
+            There is no Multisig Vault Request
           </div>
         )}
       </div>

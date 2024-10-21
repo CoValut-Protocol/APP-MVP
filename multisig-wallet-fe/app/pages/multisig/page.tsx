@@ -263,7 +263,7 @@ export default function Page() {
               )
             )
           ) : (
-            <div className="text-white"></div>
+            <div className="text-white">There is no NS Vault...</div>
           )}
         </div>
 
@@ -273,7 +273,7 @@ export default function Page() {
         <div className="flex flex-wrap mx-4 items-start justify-around pt-4 gap-4">
           {taprootWalletList?.length ? (
             taprootWalletList.map((wallet: IWalletList, index: number) =>
-              wallet.cosigner.includes(ordinalPublicKey) ? (
+              wallet.cosigner.includes(paymentPublicKey) ? (
                 <div
                   className="flex flex-col gap-3 w-[450px] px-6 rounded-3xl border-2 border-[#2C2C2C] bg-[#1C1D1F] p-4 text-white"
                   key={index + "taprootWalletList"}
