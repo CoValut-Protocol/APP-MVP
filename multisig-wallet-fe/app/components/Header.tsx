@@ -5,11 +5,6 @@ import {
   Navbar,
   NavbarContent,
   NavbarItem,
-  Button,
-  Modal,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
   useDisclosure,
 } from "@nextui-org/react";
 
@@ -22,15 +17,13 @@ import {
 import { ConnectButton, useZky } from "@kondor-finance/zky-toolkit";
 
 import Notiflix from "notiflix";
-import WalletConnectIcon from "./Icon/WalletConnectIcon";
 import WalletContext from "../contexts/WalletContext";
-import { WalletTypes, Account, SIGN_MESSAGE, TEST_MODE } from "../utils/utils";
+import { WalletTypes, Account } from "../utils/_type"; 
 
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 import type { Wallet, WalletWithFeatures } from "@wallet-standard/base";
-import { useWallets } from "@wallet-standard/react";
 import { ConnectionStatusContext } from "../contexts/ConnectContext";
 import { walletConnect } from "../controller";
 
@@ -38,24 +31,16 @@ import { walletConnect } from "../controller";
 import { IoPieChart } from "react-icons/io5";
 import { FiPlusCircle } from "react-icons/fi";
 import { IoDocumentTextOutline } from "react-icons/io5";
-import { RiShoppingBasketFill } from "react-icons/ri";
 
 import { Loading } from "./Loading";
 
 const SatsConnectNamespace = "sats-connect:";
-
-function isSatsConnectCompatibleWallet(wallet: Wallet) {
-  return SatsConnectNamespace in wallet.features;
-}
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
   const router = useRouter();
 
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const [open, setOpen] = useState(false);
-  const { wallets } = useWallets();
-  const [hash, setHash] = useState("");
 
   const connectionStatus = useContext(ConnectionStatusContext);
 
@@ -69,7 +54,6 @@ const Header = () => {
   const {
     pageIndex,
     ordinalAddress,
-    paymentAddress,
     setPageIndex,
     setWalletType,
     setOrdinalAddress,

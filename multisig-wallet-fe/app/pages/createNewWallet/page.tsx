@@ -15,15 +15,12 @@ import { FaMinus, FaPlus, FaVault } from "react-icons/fa6";
 import { IErr, IRuneAssets } from "@/app/utils/_type";
 import { AiOutlineUpload } from "react-icons/ai";
 import WalletContext from "@/app/contexts/WalletContext";
-import { SiVaultwarden } from "react-icons/si";
-import { ImShield } from "react-icons/im";
 import Notiflix from "notiflix";
-import { TEST_MODE, WalletTypes } from "@/app/utils/utils";
+import { TEST_MODE } from "@/app/utils/utils";
 import {
-  createNewAirdropVault,
-  createNewSyndicateVault,
   createNewVault,
 } from "@/app/controller";
+import { WalletTypes } from "@/app/utils/_type";
 
 export default function Page() {
   const [selected, setSelected] = useState("multi");
@@ -120,6 +117,17 @@ export default function Page() {
 
       Notiflix.Loading.hourglass("Uploading images...");
 
+      // Pay the fee for deploy
+      switch (walletType) {
+        case WalletTypes.XVERSE:
+          const txId = await (window as any).unisat.sendBitcoin();
+          break;
+      
+        default:
+          break;
+      }
+      // End pay fee
+
       const formData = new FormData();
       formData.append("file", fileInput?.current?.files?.[0]!);
 
@@ -142,26 +150,26 @@ export default function Page() {
       console.log("walletType ==> ", walletType);
 
       // if (walletType == WalletTypes.UNISAT) {
-        Notiflix.Loading.change("Creating New Vault...");
-        const result = await createNewVault(
-          cosignerList,
-          thresHoldValue,
-          assets,
-          imageUrl,
-          typeSelected
-        );
-        console.log("New Vault on submit ==> ", result);
+      Notiflix.Loading.change("Creating New Vault...");
+      const result = await createNewVault(
+        cosignerList,
+        thresHoldValue,
+        assets,
+        imageUrl,
+        typeSelected
+      );
+      console.log("New Vault on submit ==> ", result);
 
-        if (result.success) {
-          Notiflix.Notify.success(result.message);
-          console.log("new address ==> ", result.payload.vault.payload.address);
-          setNewVault(result.payload.vault.payload.address);
-        } else Notiflix.Notify.failure(result.message);
+      if (result.success) {
+        Notiflix.Notify.success(result.message);
+        console.log("new address ==> ", result.payload.vault.payload.address);
+        setNewVault(result.payload.vault.payload.address);
+      } else Notiflix.Notify.failure(result.message);
 
-        console.log("vault ==> ", result.vault.payload);
-        console.log("rune ==> ", result.rune.payload);
+      console.log("vault ==> ", result.vault.payload);
+      console.log("rune ==> ", result.rune.payload);
 
-        Notiflix.Loading.remove();
+      Notiflix.Loading.remove();
       // } else {
 
       // }
@@ -399,7 +407,11 @@ export default function Page() {
                       </button>
                       {transactionID ? (
                         <a
-                          href={TEST_MODE ? `https://mempool.space/testnet/tx/${transactionID}` : `https://mempool.space/tx/${transactionID}`}
+                          href={
+                            TEST_MODE
+                              ? `https://mempool.space/testnet/tx/${transactionID}`
+                              : `https://mempool.space/tx/${transactionID}`
+                          }
                         />
                       ) : (
                         <></>

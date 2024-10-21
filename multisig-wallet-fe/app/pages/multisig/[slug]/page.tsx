@@ -42,11 +42,12 @@ import {
 } from "@nextui-org/react";
 import Select from "react-dropdown-select";
 import { validate, Network } from "bitcoin-address-validation";
-import { ORDINAL_URL, TEST_MODE, WalletTypes } from "@/app/utils/utils";
+import { ORDINAL_URL, TEST_MODE } from "@/app/utils/utils";
+import { WalletTypes } from "@/app/utils/_type";
 
 import WalletContext from "@/app/contexts/WalletContext";
 import { useBitcoin } from "@kondor-finance/zky-toolkit";
-import { base64ToHex, HexToBase64Convertor } from "@/app/utils/commonFunc";
+import { HexToBase64Convertor } from "@/app/utils/commonFunc";
 import { Psbt } from "bitcoinjs-lib";
 import {
   BitcoinNetworkType,
