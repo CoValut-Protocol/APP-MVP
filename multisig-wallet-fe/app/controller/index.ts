@@ -5,10 +5,10 @@ import {
   ITapList,
 } from "../utils/_type";
 import {
-  IWalletList,
   OPENAPI_UNISAT_TOKEN,
   OPENAPI_UNISAT_URL,
 } from "../utils/utils";
+import { IWalletList } from "../utils/_type";
 
 export const writeHistory = async (
   paymentAddress: string,

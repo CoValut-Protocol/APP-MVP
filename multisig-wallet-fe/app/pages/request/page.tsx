@@ -8,7 +8,8 @@ import {
   updateRequestPsbtController,
 } from "@/app/controller";
 import { base64ToHex, HexToBase64Convertor } from "@/app/utils/commonFunc";
-import { IRequest, TEST_MODE, WalletTypes } from "@/app/utils/utils";
+import { TEST_MODE } from "@/app/utils/utils";
+import { IRequest, WalletTypes } from "@/app/utils/_type";
 import { Psbt } from "bitcoinjs-lib";
 import Notiflix from "notiflix";
 import React, { useContext, useEffect, useState } from "react";
@@ -27,8 +28,6 @@ export default function Page() {
   const {
     paymentPublicKey,
     paymentAddress,
-    ordinalAddress,
-    ordinalPublicKey,
     walletType,
   } = useContext(WalletContext);
 

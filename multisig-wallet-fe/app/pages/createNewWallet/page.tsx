@@ -52,9 +52,7 @@ export default function Page() {
   const {
     walletType,
     ordinalAddress,
-    ordinalPublicKey,
     paymentAddress,
-    paymentPublicKey,
   } = useContext(WalletContext);
 
   const fileInput = useRef<HTMLInputElement>(null);

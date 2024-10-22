@@ -25,7 +25,6 @@ export default function Page() {
   const {
     walletType,
     ordinalAddress,
-    ordinalPublicKey,
     paymentAddress,
     paymentPublicKey,
     pageIndex,
