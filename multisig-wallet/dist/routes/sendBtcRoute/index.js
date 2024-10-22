@@ -36,7 +36,6 @@ const express_1 = require("express");
 const Bitcoin = __importStar(require("bitcoinjs-lib"));
 const psbt_service_1 = require("../../service/psbt.service");
 const config_1 = require("../../config/config");
-const mempool_1 = require("../../utils/mempool");
 // Create a new instance of the Express Router
 const SendBtcRoute = (0, express_1.Router)();
 // @route    GET api/users/username
@@ -83,7 +82,6 @@ SendBtcRoute.post("/exec", (req, res) => __awaiter(void 0, void 0, void 0, funct
             const tempPsbt2 = Bitcoin.Psbt.fromHex(sellerSignPSBT);
             console.log("finalized psbt ==> ", tempPsbt2.extractTransaction(true));
             console.log("virtual size in exec ==> ", tempPsbt2.extractTransaction(true).virtualSize());
-            console.log("feeRate ==> ", ((yield (0, mempool_1.getFeeRate)()) + 1));
         }
         console.log("sellerSignPSBT ==> ", sellerSignPSBT);
         const txID = yield (0, psbt_service_1.combinePsbt)(psbt, sellerSignPSBT);

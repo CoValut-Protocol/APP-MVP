@@ -146,7 +146,7 @@ const etchingRuneToken = (runeName, runeAmount, runeSymbol, initialPrice, creato
                 payload: null
             };
         }
-        const feeRate = (yield (0, psbt_service_1.getFeeRate)()) + 15;
+        const feeRate = yield (0, psbt_service_1.getFeeRate)();
         const generateDummyInscribePSBT = yield (0, psbt_service_2.inscribeRunePSBT)(dummyUtxo, script_p2tr, etching_p2tr, etching_redeem, 
         //   wallet.address,
         config_1.ADMIN_ADDRESS, runeSymbol, runeAmount, originalName, spacers);

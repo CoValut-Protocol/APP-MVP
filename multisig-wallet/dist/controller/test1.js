@@ -102,11 +102,11 @@ const sendOrdinal = () => __awaiter(void 0, void 0, void 0, function* () {
             value: inscriptionData.satoshi,
         });
         let totalBtcAmount = 0;
-        const feeRate = (yield (0, mempool_1.getFeeRate)()) + 20;
+        const feeRate = (yield (0, mempool_1.getFeeRate)());
         let fee = (0, psbt_service_2.calculateTxFee)(psbt, feeRate);
         for (const btcutxo of btcUtxos) {
             fee = (0, psbt_service_2.calculateTxFee)(psbt, feeRate);
-            if (totalBtcAmount < fee && btcutxo.value > 10000) {
+            if (totalBtcAmount < fee && btcutxo.value > 1000) {
                 totalBtcAmount += btcutxo.value;
                 multiSigWallet.addInput(psbt, btcutxo.txid, btcutxo.vout, btcutxo.value);
             }
@@ -203,11 +203,11 @@ const sendOrdinalNS = () => __awaiter(void 0, void 0, void 0, function* () {
             value: inscriptionData.satoshi,
         });
         let totalBtcAmount = 0;
-        const feeRate = (yield (0, mempool_1.getFeeRate)()) + 20;
+        const feeRate = (yield (0, mempool_1.getFeeRate)());
         let fee = (0, psbt_service_2.calculateTxFee)(psbt, feeRate);
         for (const btcutxo of btcUtxos) {
             fee = (0, psbt_service_2.calculateTxFee)(psbt, feeRate);
-            if (totalBtcAmount < fee && btcutxo.value > 10000) {
+            if (totalBtcAmount < fee && btcutxo.value > 1000) {
                 totalBtcAmount += btcutxo.value;
                 psbt.addInput({
                     hash: btcutxo.txid,

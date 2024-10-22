@@ -155,7 +155,7 @@ const checkingAssets = (ordinalAddress, tokenName, tokenAmount) => __awaiter(voi
     //     if(privileage >= tokenAmount) return true
     //     else return false
     // } else if(tokenType == TokenTypes.Rune) {
-    const url = `https://open-api-testnet.unisat.io/v1/indexer/address/${ordinalAddress}/runes/${tokenName}/balance`;
+    const url = config_1.TEST_MODE ? `https://open-api-testnet.unisat.io/v1/indexer/address/${ordinalAddress}/runes/${tokenName}/balance` : `https://open-api.unisat.io/v1/indexer/address/${ordinalAddress}/runes/${tokenName}/balance`;
     const payload = yield axios_1.default.get(url, config);
     const privileage = payload.data.data.amount;
     if (privileage >= tokenAmount)

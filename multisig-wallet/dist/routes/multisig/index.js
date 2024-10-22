@@ -309,19 +309,11 @@ multiSigWalletRoute.post("/sendBtc", (req, res) => __awaiter(void 0, void 0, voi
             error += "There is no vaultType value.";
         if (vaultType == type_1.VaultType.NativeSegwit) {
             const result = yield (0, nativeMusig_controller_1.sendBtcController)(walletId, destination, amount, paymentAddress, pubKey);
-            return res.status(200).send({
-                success: true,
-                message: "The request is made successfully",
-                payload: result,
-            });
+            return res.status(200).send(result);
         }
         else {
             const result = yield (0, taproot_controller_1.sendBtcTaproot)(walletId, amount, destination, paymentAddress);
-            return res.status(200).send({
-                success: true,
-                message: "send PSBT is made successfully.",
-                payload: result,
-            });
+            return res.status(200).send(result);
         }
     }
     catch (error) {
@@ -362,11 +354,7 @@ multiSigWalletRoute.post("/sendRune", (req, res) => __awaiter(void 0, void 0, vo
         else {
             console.log("<===== Taproot Transfer ====>");
             const result = yield (0, taproot_controller_1.sendRuneTaproot)(vaultId, runeId, amount, destination, ordinalAddress);
-            return res.status(200).send({
-                success: true,
-                message: "send PSBT is made successfully.",
-                payload: result,
-            });
+            return res.status(200).send(result);
         }
     }
     catch (error) {
@@ -538,16 +526,14 @@ multiSigWalletRoute.post("/send-ordinals-ns", (req, res) => __awaiter(void 0, vo
 multiSigWalletRoute.post("/send-ordinals-taproot", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     console.log("send-ordinals-ns ==>  api is calling!!");
     try {
-        const { walletId, destination, inscriptionId, amount, paymentAddress } = req.body;
+        const { vaultId, destination, inscriptionId, paymentAddress } = req.body;
         let error = "";
-        if (!walletId)
+        if (!vaultId)
             error += "There is no walletId value.";
         if (!destination)
             error += "There is no destination value.";
         if (!inscriptionId)
             error += "There is no inscriptionId value.";
-        if (!amount)
-            error += "There is no amount value.";
         if (!paymentAddress)
             error += "There is no paymentAddress value.";
         if (error != "") {
@@ -557,12 +543,8 @@ multiSigWalletRoute.post("/send-ordinals-taproot", (req, res) => __awaiter(void 
                 payload: null,
             });
         }
-        const result = yield (0, taproot_controller_1.sendOrdinalTaproot)(walletId, destination, inscriptionId, amount, paymentAddress);
-        return res.status(200).json({
-            success: true,
-            message: "Send ordinals request saved successfully.",
-            payload: result,
-        });
+        const result = yield (0, taproot_controller_1.sendOrdinalTaproot)(vaultId, inscriptionId, destination, paymentAddress);
+        return res.status(200).json(result);
     }
     catch (error) {
         console.log("exec PSBT Error : ", error);
@@ -693,7 +675,8 @@ multiSigWalletRoute.post("/checking-brc20-request", (req, res) => __awaiter(void
 // Tap protocol
 multiSigWalletRoute.post("/pre-tap-inscribe", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { paymentAddress, paymentPublicKey, itemList } = req.body;
+        const { paymentAddress, paymentPublicKey, itemList, walletType } = req.body;
+        console.log("pre-tap-inscribe api is calling.");
         let error = "";
         if (!paymentAddress)
             error += "There is no paymentAddress value.";
@@ -701,6 +684,8 @@ multiSigWalletRoute.post("/pre-tap-inscribe", (req, res) => __awaiter(void 0, vo
             error += "There is no paymentPublicKey value.";
         if (!itemList)
             error += "There is no itemList value.";
+        if (!walletType)
+            error += "There is no walletType value.";
         if (error != "") {
             return res.status(200).json({
                 success: false,
@@ -708,7 +693,7 @@ multiSigWalletRoute.post("/pre-tap-inscribe", (req, res) => __awaiter(void 0, vo
                 payload: null,
             });
         }
-        const result = yield (0, nativeMusig_controller_1.inscribeText)(paymentAddress, paymentPublicKey, itemList);
+        const result = yield (0, nativeMusig_controller_1.inscribeText)(paymentAddress, paymentPublicKey, itemList, walletType);
         return res.status(200).json(result);
     }
     catch (error) {
@@ -799,6 +784,38 @@ multiSigWalletRoute.post("/send-tap-ordinals-ns", (req, res) => __awaiter(void 0
         console.log("exec PSBT Error : ", error);
         return res.status(200).json({
             success: false,
+            message: error,
+            payload: null,
+        });
+    }
+}));
+multiSigWalletRoute.post("/send-tap-ordinals-taproot", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log("send-tap-ordinals-taproot ==>  api is calling!!");
+    try {
+        const { vaultId, inscriptionId, paymentAddress, ordinalAddress } = req.body;
+        let error = "";
+        if (!vaultId)
+            error += "There is no walletId value.";
+        if (!ordinalAddress)
+            error += "There is no ordinalAddress value.";
+        if (!inscriptionId)
+            error += "There is no inscriptionId value.";
+        if (!paymentAddress)
+            error += "There is no paymentAddress value.";
+        if (error != "") {
+            return res.status(200).json({
+                success: false,
+                message: error,
+                payload: null,
+            });
+        }
+        const result = yield (0, taproot_controller_1.sendTapOrdinalTaproot)(vaultId, inscriptionId, paymentAddress);
+        return res.status(200).json(result);
+    }
+    catch (error) {
+        console.log("exec PSBT Error : ", error);
+        return res.status(500).json({
+            success: true,
             message: error,
             payload: null,
         });

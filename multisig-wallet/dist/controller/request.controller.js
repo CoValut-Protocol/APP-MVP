@@ -192,12 +192,14 @@ function updateRequest(id, psbt, pubkey) {
                         const sellerSignPSBT = tempPsbt.finalizeAllInputs();
                         const txID = yield (0, psbt_service_1.combinePsbt)(psbt, sellerSignPSBT.toHex());
                         console.log("combinePsbt ==> ", txID);
-                        if (!txID)
+                        if (!txID) {
+                            yield RequestModal_1.default.findByIdAndDelete(requestData._id);
                             return {
-                                success: true,
-                                message: "Transaction broadcasting failed.",
-                                payload: txID,
+                                success: false,
+                                message: "Transaction broadcasting failed. Try with another request",
+                                payload: null,
                             };
+                        }
                         // Remove old one and add new one into vault db.
                         if (requestData.type == "VaultUpgrade") {
                             if (vaultType == "NativeSegwit") {

@@ -99,24 +99,6 @@ requestRouter.post("/cancelUpdateForRequest", (req, res) => __awaiter(void 0, vo
         payload: null,
     };
 }));
-// requestRouter.get("/getRequest", async (req, res) => {
-//   try {
-//     const { pubKeyList, minSignCount } = req.body;
-//     let error = "";
-//     if (!pubKeyList.length) error += "There is no publicKey value.";
-//     if (!minSignCount) error += "There is no minSignCount value.";
-//     if (minSignCount > pubKeyList.length)
-//       error += "minSignCount should be less than pubkey list count";
-//     const address = await createMultiSigWallet(pubKeyList, minSignCount);
-//     return res.status(200).send({
-//       message: true,
-//       payload: address,
-//     });
-//   } catch (error: any) {
-//     console.error(error);
-//     return res.status(500).send({ error });
-//   }
-// });
 requestRouter.post("/exec", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     console.log("request exec api is calling!!");
     try {

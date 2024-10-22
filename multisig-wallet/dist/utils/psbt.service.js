@@ -197,7 +197,7 @@ const generateSendOrdinalPSBT = (sellerWalletType, buyerWalletType, inscriptionI
     const buyerPaymentsignIndexes = [];
     for (const utxo of btcUtxos) {
         const fee = calculateTxFee(psbt, feeRate);
-        if (amount < price + fee && utxo.value > 10000) {
+        if (amount < price + fee && utxo.value > 1000) {
             amount += utxo.value;
             buyerPaymentsignIndexes.push(psbt.inputCount);
             if (buyerWalletType === config_2.WalletTypes.UNISAT ||
@@ -278,7 +278,7 @@ const generateSendBTCPSBT = (walletType, buyerPaymentPubkey, buyerOrdinalAddress
     let amount = 0;
     const buyerPaymentsignIndexes = [];
     for (const utxo of btcUtxos) {
-        if (amount < price && utxo.value > 10000) {
+        if (amount < price && utxo.value > 1000) {
             amount += utxo.value;
             buyerPaymentsignIndexes.push(psbt.inputCount);
             if (walletType === config_2.WalletTypes.UNISAT || walletType === config_2.WalletTypes.OKX) {

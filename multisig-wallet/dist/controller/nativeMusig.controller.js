@@ -34,8 +34,9 @@ const ecc = require("tiny-secp256k1");
 const ECPair = ECPairFactory(ecc);
 const network = config_1.TEST_MODE ? bitcoin.networks.testnet : bitcoin.networks.bitcoin; // Otherwise, bitcoin = mainnet and regnet = local
 const blockstream = new axios_1.default.Axios({
-    baseURL: `https://mempool.space/testnet/api`,
-    // baseURL: `https://mempool.space/api`,
+    baseURL: config_1.TEST_MODE
+        ? `https://mempool.space/testnet/api`
+        : `https://mempool.space/api`,
 });
 function createNativeSegwit(originPubkeys, threshold, assets, network, imageUrl) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -50,6 +51,7 @@ function createNativeSegwit(originPubkeys, threshold, assets, network, imageUrl)
                     payload: null,
                 };
             const hexedPubkeys = originPubkeys.map((pubkey) => Buffer.from(pubkey, "hex"));
+            console.log("hexedPubkeys ==> ", hexedPubkeys);
             const p2ms = bitcoin.payments.p2ms({
                 m: parseInt(threshold.toString()),
                 pubkeys: hexedPubkeys,
@@ -425,7 +427,9 @@ function getBtcAndRuneByAddressController(address) {
         // inscriptionList.map((inscription: any) => {
         for (const inscription of inscriptionList) {
             const temp = inscription.utxo.inscriptions[0];
-            if (!temp.isBRC20) {
+            const content = (yield axios_1.default.get(`${config_1.ORDINAL_URL}/${temp.inscriptionId}`))
+                .data;
+            if (!temp.isBRC20 && content.p != "tap") {
                 ordinalsList.push({
                     inscriptionNumber: temp.inscriptionNumber,
                     inscriptionId: temp.inscriptionId,
@@ -479,7 +483,8 @@ function sendBtcController(walletId, destination, amount, paymentAddress, pubKey
             };
         const btcUtxos = yield (0, psbt_service_1.getBtcUtxoByAddress)(multisigVault.address);
         console.log("btcUtxos ==> ", btcUtxos);
-        const feeRate = (yield (0, psbt_service_1.getFeeRate)()) + 5;
+        const feeRate = yield (0, psbt_service_1.getFeeRate)();
+        console.log("feeRate ==> ", feeRate);
         let totalBtcAmount = 0;
         let fee = 0;
         for (const btcutxo of btcUtxos) {
@@ -501,13 +506,19 @@ function sendBtcController(walletId, destination, amount, paymentAddress, pubKey
         console.log("fee ==> ", fee);
         console.log("amount ==> ", amount);
         console.log("fee + amount*1 ==> ", fee + amount * 1);
-        if (totalBtcAmount < fee + amount * 1)
-            throw "BTC balance is not enough";
+        let outputCount = 0;
         psbt.addOutput({
             address: destination,
             value: amount * 1,
         });
+        outputCount++;
         fee = (0, psbt_service_1.calculateTxFee)(psbt, feeRate);
+        if (totalBtcAmount < fee + amount * 1)
+            return {
+                success: false,
+                message: "BTC balance is not enough",
+                payload: null,
+            };
         psbt.addOutput({
             address: multisigVault.address,
             value: totalBtcAmount - amount - fee,
@@ -528,7 +539,11 @@ function sendBtcController(walletId, destination, amount, paymentAddress, pubKey
         });
         yield newRequest.save();
         console.log("psbt.toHex() ==> ", psbt.toHex());
-        return psbt.toHex();
+        return {
+            success: true,
+            message: "Generating PSBT successfully.",
+            payload: psbt.toHex(),
+        };
     });
 }
 exports.sendBtcController = sendBtcController;
@@ -544,6 +559,7 @@ function sendRuneController(walletId, destination, runeId, amount, paymentAddres
             return {
                 success: false,
                 message: "Not Found Multisig wallet.",
+                payload: null,
             };
         const { witnessScript, p2msOutput, address, threshold, cosigner, assets } = multisigVault;
         const psbt = new bitcoinjs_lib_1.Psbt({
@@ -559,6 +575,7 @@ function sendRuneController(walletId, destination, runeId, amount, paymentAddres
             return {
                 success: false,
                 message: "Not Found Multisig Assets.",
+                payload: null,
             };
         const btcUtxos = yield (0, psbt_service_1.getBtcUtxoByAddress)(address);
         const runeUtxos = yield (0, psbt_service_1.getRuneUtxoByAddress)(address, runeId);
@@ -615,13 +632,13 @@ function sendRuneController(walletId, destination, runeId, amount, paymentAddres
             address: destination,
             value: 546,
         });
-        const feeRate = (yield (0, psbt_service_1.getFeeRate)()) + 10;
+        const feeRate = yield (0, psbt_service_1.getFeeRate)();
         console.log("feeRate ==> ", feeRate);
         let FinalTotalBtcAmount = 0;
         let finalFee = 0;
         for (const btcutxo of btcUtxos) {
             finalFee = yield (0, psbt_service_1.calculateTxFee)(psbt, feeRate);
-            if (FinalTotalBtcAmount < finalFee && btcutxo.value > 10000) {
+            if (FinalTotalBtcAmount < finalFee && btcutxo.value > 1000) {
                 FinalTotalBtcAmount += btcutxo.value;
                 psbt.addInput({
                     hash: btcutxo.txid,
@@ -636,7 +653,11 @@ function sendRuneController(walletId, destination, runeId, amount, paymentAddres
         }
         console.log("Pay finalFee =====================>", finalFee);
         if (FinalTotalBtcAmount < finalFee)
-            throw "BTC balance is not enough";
+            return {
+                success: false,
+                message: "BTC balance is not enough",
+                payload: null,
+            };
         console.log("FinalTotalBtcAmount ====>", FinalTotalBtcAmount);
         psbt.addOutput({
             address: address,
@@ -657,7 +678,11 @@ function sendRuneController(walletId, destination, runeId, amount, paymentAddres
         });
         yield newRequest.save();
         console.log("psbt.toHex() ==> ", psbt.toHex());
-        return psbt.toHex();
+        return {
+            success: true,
+            message: "Generating PSBT successfully",
+            payload: psbt.toHex(),
+        };
     });
 }
 exports.sendRuneController = sendRuneController;
@@ -705,13 +730,13 @@ function sendOrdinalsController(walletId, destination, inscriptionId, paymentAdd
             value: inscriptionData.satoshi,
         });
         const btcUtxos = yield (0, psbt_service_1.getBtcUtxoByAddress)(address);
-        const feeRate = (yield (0, psbt_service_1.getFeeRate)()) + 400;
+        const feeRate = yield (0, psbt_service_1.getFeeRate)();
         console.log("feeRate ==> ", feeRate);
         let FinalTotalBtcAmount = 0;
         let finalFee = 0;
         for (const btcutxo of btcUtxos) {
             finalFee = yield (0, psbt_service_1.calculateTxFee)(psbt, feeRate);
-            if (FinalTotalBtcAmount < finalFee && btcutxo.value > 10000) {
+            if (FinalTotalBtcAmount < finalFee && btcutxo.value > 1000) {
                 FinalTotalBtcAmount += btcutxo.value;
                 psbt.addInput({
                     hash: btcutxo.txid,
@@ -795,13 +820,13 @@ function sendbrc20Controller(vaultId, inscriptionId, destination, ticker, amount
             value: inscriptionData.satoshi,
         });
         const btcUtxos = yield (0, psbt_service_1.getBtcUtxoByAddress)(address);
-        const feeRate = (yield (0, psbt_service_1.getFeeRate)()) + 10;
+        const feeRate = yield (0, psbt_service_1.getFeeRate)();
         console.log("feeRate ==> ", feeRate);
         let FinalTotalBtcAmount = 0;
         let finalFee = 0;
         for (const btcutxo of btcUtxos) {
             finalFee = yield (0, psbt_service_1.calculateTxFee)(psbt, feeRate);
-            if (FinalTotalBtcAmount < finalFee && btcutxo.value > 10000) {
+            if (FinalTotalBtcAmount < finalFee && btcutxo.value > 1000) {
                 FinalTotalBtcAmount += btcutxo.value;
                 psbt.addInput({
                     hash: btcutxo.txid,
@@ -916,84 +941,132 @@ function waitUntilUTXO(address) {
     });
 }
 exports.waitUntilUTXO = waitUntilUTXO;
-const inscribeText = (paymentAddress, paymentPublicKey, itemList) => __awaiter(void 0, void 0, void 0, function* () {
+const inscribeText = (paymentAddress, paymentPublicKey, itemList, walletType) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
-    const keyPair = ECPair.makeRandom({ network: network });
-    const privateKey = keyPair.toWIF();
-    const parentOrdinalStack = createparentInscriptionTapScript(keyPair.publicKey, itemList);
-    const ordinal_script = bitcoin.script.compile(parentOrdinalStack);
-    const scriptTree = {
-        output: ordinal_script,
-    };
-    const redeem = {
-        output: ordinal_script,
-        redeemVersion: 192,
-    };
-    const ordinal_p2tr = bitcoin.payments.p2tr({
-        internalPubkey: (0, bip371_1.toXOnly)(keyPair.publicKey),
-        network,
-        scriptTree,
-        redeem,
-    });
-    const address = (_a = ordinal_p2tr.address) !== null && _a !== void 0 ? _a : "";
-    console.log("send coin to address", address);
-    const btcUtxos = yield (0, psbt_service_1.getBtcUtxoByAddress)(paymentAddress);
-    const psbt = new bitcoinjs_lib_1.Psbt({ network });
-    const feeRate = (yield (0, psbt_service_1.getFeeRate)()) + 600;
-    console.log("feeRate ==> ", feeRate);
-    let fee;
-    let totalBtcAmount = 0;
-    const sendAmount = yield (0, exports.generateDummyInscribe)(feeRate, itemList);
-    console.log("sendAmount => ", sendAmount);
-    for (const btcutxo of btcUtxos) {
-        fee = (0, psbt_service_1.calculateTxFee)(psbt, feeRate);
-        if (totalBtcAmount < fee + sendAmount && btcutxo.value > 10000) {
-            totalBtcAmount += btcutxo.value;
-            psbt.addInput({
-                hash: btcutxo.txid,
-                index: btcutxo.vout,
-                witnessUtxo: {
-                    value: btcutxo.value,
-                    script: Buffer.from(btcutxo.scriptpubkey, "hex"),
-                },
-                tapInternalKey: Buffer.from(paymentPublicKey, "hex").slice(1, 33),
+    try {
+        const keyPair = ECPair.makeRandom({ network: network });
+        const privateKey = keyPair.toWIF();
+        const parentOrdinalStack = createparentInscriptionTapScript(keyPair.publicKey, itemList);
+        const ordinal_script = bitcoin.script.compile(parentOrdinalStack);
+        const scriptTree = {
+            output: ordinal_script,
+        };
+        const redeem = {
+            output: ordinal_script,
+            redeemVersion: 192,
+        };
+        const ordinal_p2tr = bitcoin.payments.p2tr({
+            internalPubkey: (0, bip371_1.toXOnly)(keyPair.publicKey),
+            network,
+            scriptTree,
+            redeem,
+        });
+        const address = (_a = ordinal_p2tr.address) !== null && _a !== void 0 ? _a : "";
+        console.log("send coin to address", address);
+        let paymentoutput;
+        console.log("walletType ==> ", walletType);
+        if (walletType === config_1.WalletTypes.XVERSE) {
+            const hexedPaymentPubkey = Buffer.from(paymentPublicKey, "hex");
+            const p2wpkh = bitcoinjs_lib_1.payments.p2wpkh({
+                pubkey: hexedPaymentPubkey,
+                network: network,
             });
+            const { address, redeem } = bitcoinjs_lib_1.payments.p2sh({
+                redeem: p2wpkh,
+                network: network,
+            });
+            paymentoutput = redeem === null || redeem === void 0 ? void 0 : redeem.output;
         }
+        const btcUtxos = yield (0, psbt_service_1.getBtcUtxoByAddress)(paymentAddress);
+        console.log("btcUtxos ==> ", btcUtxos);
+        console.log("paymentAddress ==> ", paymentAddress);
+        const psbt = new bitcoinjs_lib_1.Psbt({ network });
+        const feeRate = yield (0, psbt_service_1.getFeeRate)();
+        console.log("feeRate ==> ", feeRate);
+        let fee;
+        let totalBtcAmount = 0;
+        const sendAmount = yield (0, exports.generateDummyInscribe)(feeRate, itemList);
+        console.log("sendAmount => ", sendAmount);
+        for (const btcutxo of btcUtxos) {
+            fee = (0, psbt_service_1.calculateTxFee)(psbt, feeRate);
+            if (totalBtcAmount < fee + sendAmount && btcutxo.value > 1000) {
+                totalBtcAmount += btcutxo.value;
+                if (walletType === config_1.WalletTypes.UNISAT ||
+                    walletType === config_1.WalletTypes.OKX) {
+                    psbt.addInput({
+                        hash: btcutxo.txid,
+                        index: btcutxo.vout,
+                        witnessUtxo: {
+                            value: btcutxo.value,
+                            script: Buffer.from(btcutxo.scriptpubkey, "hex"),
+                        },
+                        tapInternalKey: Buffer.from(paymentPublicKey, "hex").slice(1, 33),
+                    });
+                }
+                else if (walletType === config_1.WalletTypes.XVERSE) {
+                    const txHex = yield (0, function_1.getTxHexById)(btcutxo.txid);
+                    psbt.addInput({
+                        hash: btcutxo.txid,
+                        index: btcutxo.vout,
+                        redeemScript: paymentoutput,
+                        nonWitnessUtxo: Buffer.from(txHex, "hex"),
+                    });
+                }
+            }
+        }
+        fee = (0, psbt_service_1.calculateTxFee)(psbt, feeRate);
+        console.log("totalBtcAmount ==> ", totalBtcAmount);
+        console.log("fee + sendAmount ==> ", fee + sendAmount);
+        if (totalBtcAmount < fee + sendAmount)
+            throw `You Have not got enough money. Need ${totalBtcAmount} sats but you have only ${fee + sendAmount} sats. `;
+        psbt.addOutput({
+            address: address,
+            value: sendAmount,
+        });
+        psbt.addOutput({
+            address: paymentAddress,
+            value: totalBtcAmount - fee - sendAmount,
+        });
+        return {
+            success: true,
+            message: "Success",
+            payload: {
+                amount: sendAmount,
+                privateKey: privateKey,
+                psbt: psbt.toHex(),
+            },
+        };
     }
-    fee = (0, psbt_service_1.calculateTxFee)(psbt, feeRate);
-    console.log("totalBtcAmount ==> ", totalBtcAmount);
-    console.log("fee + sendAmount ==> ", fee + sendAmount);
-    if (totalBtcAmount < fee + sendAmount)
-        throw `You Have not got enough money. Need ${totalBtcAmount} sats but you have only ${fee + sendAmount} sats. `;
-    psbt.addOutput({
-        address: address,
-        value: sendAmount,
-    });
-    psbt.addOutput({
-        address: paymentAddress,
-        value: totalBtcAmount - fee - sendAmount,
-    });
-    return {
-        success: true,
-        message: "Success",
-        payload: {
-            amount: sendAmount,
-            privateKey: privateKey,
-            psbt: psbt.toHex(),
-        },
-    };
+    catch (error) {
+        console.log("Inscribe Text Error ", error);
+        return {
+            success: false,
+            message: "Get failed while inscribing text",
+            payload: error,
+        };
+    }
 });
 exports.inscribeText = inscribeText;
 const generateDummyInscribe = (feeRate, itemList) => __awaiter(void 0, void 0, void 0, function* () {
-    const privateKey = "cNfPNUCLMdcSM4aJhuEiKEK44YoziFVD3EYh9tVgc4rjSTeaYwHP";
-    const receiveAddress = "tb1p2vsa0qxsn96sulauasfgyyccfjdwp2rzg8h2ejpxcdauulltczuqw02jmj";
-    const utxos = {
-        txid: "6a1e51b99bf5bb69fab155f9e1ac44b6402e0b9fb2dab715bbf9c2e09cef366c",
-        vout: 0,
-        value: 1000,
-    };
+    const privateKey = config_1.TEST_MODE
+        ? "cNfPNUCLMdcSM4aJhuEiKEK44YoziFVD3EYh9tVgc4rjSTeaYwHP"
+        : "Kzv5ZwHhXoNpkB5tgqLrE5sTPELE5kA8Q1DmKQBvvJstbxiZUewn";
+    const receiveAddress = config_1.TEST_MODE
+        ? "tb1p2vsa0qxsn96sulauasfgyyccfjdwp2rzg8h2ejpxcdauulltczuqw02jmj"
+        : "bc1p82293vmfxnyd0tplme0gjzgrpte2ter30slgfk8c65wxl5vjv7dsphn0lq";
+    const utxos = config_1.TEST_MODE
+        ? {
+            txid: "6a1e51b99bf5bb69fab155f9e1ac44b6402e0b9fb2dab715bbf9c2e09cef366c",
+            vout: 0,
+            value: 1000,
+        }
+        : {
+            txid: "3b1018753057fb318c410b5d68e65a15213ad8a991e4f7804c99a7c2daf9791e",
+            vout: 1,
+            value: 7217,
+        };
     const wallet = new WIFWallet_1.WIFWallet({
-        networkType: network,
+        networkType: config_1.TEST_MODE ? "testnet" : "mainnet",
         privateKey: privateKey,
     });
     const keyPair = wallet.ecPair;
@@ -1064,7 +1137,7 @@ const getInscribe = (receiveAddress, privateKey, amount, hexedPsbt, signedHexedP
 exports.getInscribe = getInscribe;
 const generateInscribe = (receiveAddress, privateKey, txId, amount, itemList) => __awaiter(void 0, void 0, void 0, function* () {
     const wallet = new WIFWallet_1.WIFWallet({
-        networkType: network,
+        networkType: config_1.TEST_MODE ? "testnet" : "mainnet",
         privateKey: privateKey,
     });
     const keyPair = wallet.ecPair;
@@ -1122,6 +1195,7 @@ function fetchTapBalanceList(address) {
     return __awaiter(this, void 0, void 0, function* () {
         const url = `${config_1.TRAC_NETWORK_API}/getAccountTokensBalance/${address}`;
         const result = yield axios_1.default.get(url);
+        console.log("tap balance url ==> ", url);
         console.log("fetchTapBalanceList result ==> ", result.data.data.list);
         const temp = result.data.data.list;
         if (!temp.length)
@@ -1199,13 +1273,13 @@ function sendTapOrdinalsController(walletId, inscriptionId, paymentAddress, ordi
             value: inscriptionData.satoshi,
         });
         const btcUtxos = yield (0, psbt_service_1.getBtcUtxoByAddress)(address);
-        const feeRate = (yield (0, psbt_service_1.getFeeRate)()) + 400;
+        const feeRate = yield (0, psbt_service_1.getFeeRate)();
         console.log("feeRate ==> ", feeRate);
         let FinalTotalBtcAmount = 0;
         let finalFee = 0;
         for (const btcutxo of btcUtxos) {
             finalFee = yield (0, psbt_service_1.calculateTxFee)(psbt, feeRate);
-            if (FinalTotalBtcAmount < finalFee && btcutxo.value > 10000) {
+            if (FinalTotalBtcAmount < finalFee && btcutxo.value > 1000) {
                 FinalTotalBtcAmount += btcutxo.value;
                 psbt.addInput({
                     hash: btcutxo.txid,

@@ -55,7 +55,7 @@ app.use("/api/test", routes_1.testRoute);
 app.use("/api-docs", swagger_ui_express_1.default.serve, swagger_ui_express_1.default.setup(swaggerDocument, { explorer: true }));
 // Define a route to check if the backend server is running
 app.get("/", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    res.send("Backend Server is Running now!");
+    res.send("Working Version Backend Server is Running now!");
 }));
 server.listen(config_1.PORT, () => {
     console.log(`Server is running on port ${config_1.PORT}`);
