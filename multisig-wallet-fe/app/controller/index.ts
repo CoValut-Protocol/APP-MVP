@@ -218,14 +218,14 @@ export const btcTransferController = async (
   destination: string,
   amount: number,
   paymentAddress: string,
-  pubKey: string,
+  ordinalAddress: string,
   vaultType: string
 ) => {
   console.log("walletId ==> ", walletId);
   console.log("destination ==> ", destination);
   console.log("amount ==> ", amount);
   console.log("paymentAddress ==> ", paymentAddress);
-  console.log("pubKey ==> ", pubKey);
+  console.log("ordinalAddress ==> ", ordinalAddress);
   console.log("vaultType ==> ", vaultType);
 
   try {
@@ -237,7 +237,7 @@ export const btcTransferController = async (
         destination,
         amount,
         paymentAddress,
-        pubKey,
+        ordinalAddress,
         vaultType,
       }),
     });
@@ -1649,6 +1649,7 @@ export const ordinalTransferController = async (
   destination: string,
   inscriptionId: string,
   paymentAddress: string,
+  ordinalAddress: string,
   vaultType: string
 ) => {
   try {
@@ -1660,6 +1661,7 @@ export const ordinalTransferController = async (
         destination,
         inscriptionId,
         paymentAddress,
+        ordinalAddress,
         vaultType,
       }),
     });
@@ -1823,6 +1825,30 @@ export const usdToBtcController = async (amount: number) => {
     } else {
       const data = await response.json();
       console.log("usdToBtcController Controller ==> ", data);
+      return data;
+    }
+  } catch (error) {
+    console.log("usdToBtcController error ==> ", error);
+    return [];
+  }
+};
+
+export const getFeeLevelController = async (address: string) => {
+  try {
+    const response = await fetch(`/api/utils/getFeeLevel`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        address
+      }),
+    });
+    if (response.status == 200) {
+      const data = await response.json();
+      console.log("getFeeLevelController Controller ==> ", data);
+      return data;
+    } else {
+      const data = await response.json();
+      console.log("getFeeLevelController Controller ==> ", data);
       return data;
     }
   } catch (error) {

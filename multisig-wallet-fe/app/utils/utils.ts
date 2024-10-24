@@ -1,5 +1,5 @@
 export const SIGN_MESSAGE = "Welcome to Co-vault!";
-export const TEST_MODE = false;
+export const TEST_MODE = true;
 
 export const MEMPOOL_API = TEST_MODE
   ? "https://mempool.space/testnet/api"
@@ -25,4 +25,4 @@ export const ORDINAL_URL = TEST_MODE
   ? "https://static-testnet.unisat.io/content"
   : "https://static.unisat.io/content";
 
-export const CURRENT_BITCOIN_PRICE = "https://api.coindesk.com/v1/bpi/currentprice.json";
+export const CURRENT_BITCOIN_PRICE_URL = "https://api.coindesk.com/v1/bpi/currentprice.json";

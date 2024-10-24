@@ -174,7 +174,7 @@ export default function Page() {
         destination,
         amount,
         paymentAddress,
-        paymentPublicKey,
+        ordinalAddress,
         vaultType
       );
       console.log("result ==> ", result);
@@ -241,6 +241,7 @@ export default function Page() {
         destination,
         sendInscribe,
         paymentAddress,
+        ordinalAddress,
         vaultType
       );
       console.log("result ==> ", result);

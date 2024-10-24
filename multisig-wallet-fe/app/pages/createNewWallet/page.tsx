@@ -17,12 +17,14 @@ import { AiOutlineUpload } from "react-icons/ai";
 import WalletContext from "@/app/contexts/WalletContext";
 import Notiflix from "notiflix";
 import { TEST_MODE } from "@/app/utils/utils";
-import {
-  createNewVault,
-} from "@/app/controller";
+import { createNewVault, getFeeLevelController, usdToBtcController } from "@/app/controller";
 import { WalletTypes } from "@/app/utils/_type";
+import { DEPLOY_FEE, DEPLOY_FEE_VIP } from "@/app/utils/constant";
+import { FEE_ADDRESS } from "@/app/utils/serverAddress";
+import { useBitcoin } from "@kondor-finance/zky-toolkit";
 
 export default function Page() {
+  const { signMessage, signPsbt, sendTransfer } = useBitcoin();
   const [selected, setSelected] = useState("multi");
   // CreateNewVault
   const [coSignerCount, setCoSignerCount] = useState(0);
@@ -49,11 +51,8 @@ export default function Page() {
     preview: "",
   });
 
-  const {
-    walletType,
-    ordinalAddress,
-    paymentAddress,
-  } = useContext(WalletContext);
+  const { walletType, ordinalAddress, paymentAddress } =
+    useContext(WalletContext);
 
   const fileInput = useRef<HTMLInputElement>(null);
   const uploadFile = async (evt: any) => {
@@ -116,13 +115,39 @@ export default function Page() {
       Notiflix.Loading.hourglass("Uploading images...");
 
       // Pay the fee for deploy
+      const feeLevel = await getFeeLevelController(ordinalAddress);
+      console.log("feeLevel ==> ", feeLevel);
+      const satsAmount = await usdToBtcController(feeLevel ?  DEPLOY_FEE_VIP : DEPLOY_FEE);
+      console.log("DEPLOY SATS AMOUNT ==> ", satsAmount);
+
+      let payingFeeTxid = "";
+
       switch (walletType) {
-        case WalletTypes.XVERSE:
-          const txId = await (window as any).unisat.sendBitcoin();
+        case WalletTypes.UNISAT:
+          payingFeeTxid = await (window as any).unisat.sendBitcoin(
+            FEE_ADDRESS,
+            satsAmount
+          );
+          console.log("payingFeeTxid ==> ", payingFeeTxid);
           break;
-      
+        case WalletTypes.XVERSE:
+          console.log("Paying fee with Xverse wallet.")
+          await sendTransfer(FEE_ADDRESS, (satsAmount / Math.pow(10, 8)).toString())
+            .then((txId) => {
+              payingFeeTxid = txId;
+              console.log("Transaction successful with ID:", txId);
+            })
+            .catch((error) => {
+              console.log("error ==> ", error);
+            });
         default:
           break;
+      }
+
+      if(!payingFeeTxid) {
+        Notiflix.Loading.remove();
+        Notiflix.Notify.failure("Paying Fee is failed.");
+        return
       }
       // End pay fee
 

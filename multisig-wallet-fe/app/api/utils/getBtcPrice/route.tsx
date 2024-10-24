@@ -1,5 +1,4 @@
-import { DEPLOY_FEE } from "@/app/utils/constant";
-import { CURRENT_BITCOIN_PRICE } from "@/app/utils/utils";
+import { CURRENT_BITCOIN_PRICE_URL } from "@/app/utils/utils";
 import { NextRequest } from "next/server";
 
 // Fetch a inscriptions using wallet address
@@ -12,7 +11,7 @@ export async function POST(request: NextRequest) {
 
     let config = {
       method: "get",
-      url: `${CURRENT_BITCOIN_PRICE}`,
+      url: `${CURRENT_BITCOIN_PRICE_URL}`,
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
     };
 
@@ -21,7 +20,7 @@ export async function POST(request: NextRequest) {
     const btcPrice = response.data.bpi.USD.rate_float;
     console.log("Success in get current btc price ==> ", btcPrice);
 
-    const usdToBtcPrice = Math.ceil(DEPLOY_FEE * Math.pow(10, 8) / btcPrice);
+    const usdToBtcPrice = Math.ceil(amount * Math.pow(10, 8) / btcPrice);
     console.log("usdToBtcPrice ==> ", usdToBtcPrice)
 
     return Response.json(usdToBtcPrice);
