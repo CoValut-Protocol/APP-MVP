@@ -351,6 +351,7 @@ export const brc20TransferController = async (
   ticker: string,
   amount: number,
   paymentAddress: string,
+  ordinalAddress: string,
   vaultType: string
 ) => {
   try {
@@ -364,6 +365,7 @@ export const brc20TransferController = async (
         ticker,
         amount,
         paymentAddress,
+        ordinalAddress,
         vaultType,
       }),
     });

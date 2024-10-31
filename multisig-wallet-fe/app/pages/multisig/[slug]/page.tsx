@@ -453,6 +453,7 @@ export default function Page() {
         brc20List[batchIndex].ticker,
         amount,
         paymentAddress,
+        ordinalAddress,
         vaultType
       );
       console.log("result ==> ", result);
