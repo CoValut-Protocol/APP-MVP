@@ -816,7 +816,7 @@ export default function Page() {
 
   return ordinalAddress ? (
     <>
-      <div className="py-20 px-10">
+      <div className="py-20 px-10 mt-20">
         {multisigVaultData ? (
           <div className="flex flex-col gap-4">
             <div className="mx-auto">
