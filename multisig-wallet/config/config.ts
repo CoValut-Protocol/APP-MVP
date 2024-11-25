@@ -11,7 +11,7 @@ try {
 export const PORT = process.env.PORT || 9000;
 export const JWT_SECRET = process.env.JWT_SECRET || "JWT_SECRET";
 
-export const TEST_MODE = true;
+export const TEST_MODE = false;
 export const MONGO_URL = TEST_MODE
   ? `mongodb+srv://toskypi1016:Zjlf8P7TbhS2oy89@cluster0.qyg4xxl.mongodb.net/Multisig`
   : `mongodb+srv://michalstefanowmarek:0QmtMFAXiHVKEVAi@cluster0.7emwb.mongodb.net/`;
